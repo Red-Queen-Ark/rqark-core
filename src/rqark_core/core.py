@@ -29,7 +29,7 @@ class AgentCore:
     
     def set_tools(self, tools: Sequence[BaseTool]):
         self.tools = tools
-        self._tool_map = {t.name(): t for t in tools}
+        self._tool_map = {t.name: t for t in tools}
         
     def set_provider(self, provider: Provider) -> None:
         self.provider = provider
@@ -39,8 +39,8 @@ class AgentCore:
             timeout=self.timeout,
         )
 
-    async def chat(self, messages: Sequence[Message]) -> Sequence[Message]:
-        history = list(messages)
+    async def chat(self, messages: Sequence[Message], system_prompts: Sequence[Message] = []) -> Sequence[Message]:
+        history = list(system_prompts) + list(messages)
         while True:
             # params
             params: dict[str, Any] = {
@@ -61,7 +61,7 @@ class AgentCore:
             for tool_msg in tool_msgs:
                 history.append(tool_msg)
                 await self._emit(Chunk('tool_result', tool_msg))
-        return history
+        return history[len(system_prompts):]
 
     async def _parse_stream(self, stream: Any) -> AssistantMessage:
         content = ""
