@@ -3,7 +3,7 @@ from typing import Sequence
 
 from rqark_core.core import AgentCore
 from rqark_core.types.provider import Provider
-from rqark_core.types.chat import UserMessage, SystemMessage, ToolMessage, Chunk
+from rqark_core.types.chat import UserMessage, SystemMessage, ToolMessage, Chunk, Message
 from rqark_core.prompts import DateTimePrompt, RolePrompt, PlatformPrompt
 from rqark_core.tools import WebSearch, WebFetch
 
@@ -25,7 +25,7 @@ core = AgentCore(provider, tools)
 
 last_chunk_type = Chunk('reasoning_content', '')
 
-@core.on_event()
+@core.on_chunk()
 async def print_chunk(chunk: Chunk):
     global last_chunk_type
     if last_chunk_type.type != chunk.type:
@@ -42,7 +42,11 @@ async def print_chunk(chunk: Chunk):
     elif chunk.type == 'error':
         print(f'[error] {chunk.content}')
     last_chunk_type = chunk
-        
+
+@core.on_message()
+async def print_message(message: Message):
+    print(f'[message] {type(message).__name__}')
+
 async def main() -> None:
     messgaes = [ UserMessage('今日天氣') ]
     system_prompts = [ SystemMessage('') ]

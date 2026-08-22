@@ -16,18 +16,29 @@ class AgentCore:
         self.provider_retries = 3
         self.provider_retry_delay = 1
         self._listeners: list[Callable[[Chunk], Awaitable[None]]] = []
+        self._message_listeners: list[Callable[[Message], Awaitable[None]]] = []
         self.set_tools(tools)
         self.set_provider(provider)
         
-    def on_event(self) -> Callable[[Callable[[Chunk], Awaitable[None]]], Callable[[Chunk], Awaitable[None]]]:
+    def on_chunk(self) -> Callable[[Callable[[Chunk], Awaitable[None]]], Callable[[Chunk], Awaitable[None]]]:
         def decorator(f: Callable[[Chunk], Awaitable[None]]) -> Callable[[Chunk], Awaitable[None]]:
             self._listeners.append(f)
+            return f
+        return decorator
+
+    def on_message(self) -> Callable[[Callable[[Message], Awaitable[None]]], Callable[[Message], Awaitable[None]]]:
+        def decorator(f: Callable[[Message], Awaitable[None]]) -> Callable[[Message], Awaitable[None]]:
+            self._message_listeners.append(f)
             return f
         return decorator
 
     async def _emit(self, chunk: Chunk) -> None:
         for fn in self._listeners:
             await fn(chunk)
+
+    async def _emit_message(self, message: Message) -> None:
+        for fn in self._message_listeners:
+            await fn(message)
     
     def set_tools(self, tools: Sequence[BaseTool]):
         self.tools = tools
@@ -69,6 +80,7 @@ class AgentCore:
             except Exception as e:
                 return await self._fail(str(e), history, system_prompts)
             history.append(msg)
+            await self._emit_message(msg)
             if not msg.tool_calls:
                 break
             tool_msgs = await asyncio.gather(*[self._run_tool(tc) for tc in msg.tool_calls], return_exceptions=True)
@@ -76,6 +88,7 @@ class AgentCore:
                 if isinstance(tool_msg, BaseException):
                     tool_msg = ToolMessage(tc.id, f"Error: {tool_msg}", tc.name, tc.arguments)
                 history.append(tool_msg)
+                await self._emit_message(tool_msg)
                 await self._emit(Chunk('tool_result', tool_msg))
         return None, history[len(system_prompts):]
 
@@ -130,12 +143,8 @@ class AgentCore:
             await self._emit(Chunk('tool_calls', tool_calls))
         if usage:
             await self._emit(Chunk('usage', usage))
-        return AssistantMessage(
-            content=content,
-            tool_calls=tool_calls,
-            reasoning_content=reasoning or None,
-            usage=usage,
-        )
+        assistant_message = AssistantMessage( content=content, tool_calls=tool_calls, reasoning_content=reasoning or None, usage=usage)
+        return assistant_message
 
     def _to_tool_call(self, data: dict[str, Any]) -> ToolCall:
         return ToolCall(data["id"], data["type"], data["function"]["name"], data["function"]["arguments"])
