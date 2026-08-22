@@ -59,7 +59,7 @@ class SubAgent(BaseTool):
         id = str(uuid4())
         prompt: str | None = kwargs.get('prompt')
         if prompt is None:
-            raise TypeError()
+            raise TypeError('prompt is required')
         core = AgentCore()
 
         @core.on_chunk()
