@@ -7,7 +7,7 @@ from openai import AsyncOpenAI
 
 from rqark_core.types.provider import Provider
 from rqark_core.types.tool import BaseTool
-from rqark_core.types.chat import Chunk, Message, AssistantMessage, ToolMessage, ToolCall, Usage
+from rqark_core.types.chat import Chunk, Message, AssistantMessage, ToolMessage, ToolCall, ToolCallChunk, Usage
 
 
 class AgentCore:
@@ -67,7 +67,7 @@ class AgentCore:
         content = ""
         reasoning = ""
         usage: Usage | None = None
-        tc_acc: dict[int, dict[str, Any]] = {}
+        tc_acc: dict[int, ToolCallChunk] = {}
 
         async for chunk in stream:
             if chunk.usage:

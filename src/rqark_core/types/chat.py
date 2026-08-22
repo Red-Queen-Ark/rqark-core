@@ -19,7 +19,6 @@ class ToolCall(TypedDict):
     type: Literal['function']
     function: FunctionCall
 
-
 class ToolCallChunk(TypedDict, total=False):
     index: int
     id: str
@@ -76,7 +75,4 @@ type Message = UserMessage | ToolMessage | AssistantMessage | SystemMessage
 @dataclass
 class Chunk:
     type: ChunkType
-    content: list | str | ToolMessage | Usage
-    
-    def __str__(self):
-        return f"{self.type:18s}: {self.content}"
+    content: str | ToolMessage | list[ToolCall] | Usage
