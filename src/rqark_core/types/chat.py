@@ -2,7 +2,7 @@ from dataclasses import dataclass, asdict
 from typing import Literal
 
 type Role = Literal['system', 'user', 'assistant', 'tool']
-type ChunkType = Literal['reasoning_content', 'content', 'tool_calls', 'tool_result', 'usage']
+type ChunkType = Literal['reasoning_content', 'content', 'tool_calls', 'tool_result', 'usage', 'error']
 
 @dataclass
 class Usage:

@@ -39,6 +39,8 @@ async def print_chunk(chunk: Chunk):
             print(call.name, call.arguments)
     elif chunk.type == 'tool_result' and isinstance(chunk.content, ToolMessage):
         print(chunk.content.tool_name, chunk.content.content)
+    elif chunk.type == 'error':
+        print(f'[error] {chunk.content}')
     last_chunk_type = chunk
         
 async def main() -> None:
@@ -47,7 +49,7 @@ async def main() -> None:
     for prompt in prompts:
         if p := prompt.get_messages():
             system_prompts[0].content += p
-    new_messgaes = await core.chat(messgaes, system_prompts)
+    error, new_messgaes = await core.chat(messgaes, system_prompts)
 
 if __name__ == "__main__":
     asyncio.run(main())

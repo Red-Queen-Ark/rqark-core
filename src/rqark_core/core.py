@@ -12,6 +12,9 @@ from rqark_core.types.chat import Chunk, Message, AssistantMessage, ToolMessage,
 class AgentCore:
     def __init__(self, provider: Provider, tools: Sequence[BaseTool] = []):
         self.timeout = 5
+        self.tool_timeout = 30
+        self.provider_retries = 3
+        self.provider_retry_delay = 1
         self._listeners: list[Callable[[Chunk], Awaitable[None]]] = []
         self.set_tools(tools)
         self.set_provider(provider)
@@ -38,7 +41,7 @@ class AgentCore:
             timeout=self.timeout,
         )
 
-    async def chat(self, messages: Sequence[Message], system_prompts: Sequence[Message] = []) -> Sequence[Message]:
+    async def chat(self, messages: Sequence[Message], system_prompts: Sequence[Message] = []) -> tuple[str | None, Sequence[Message]]:
         history = list(system_prompts) + list(messages)
         while True:
             params: dict[str, Any] = {
@@ -49,16 +52,42 @@ class AgentCore:
             }
             if self.tools:
                 params["tools"] = [t.get_openai_schema() for t in self.tools]
-            resp = await self._client.chat.completions.create(**params)
-            msg = await self._parse_stream(resp)
+            last_err: Exception | None = None
+            for attempt in range(self.provider_retries):
+                try:
+                    resp = await self._client.chat.completions.create(**params)
+                    last_err = None
+                    break
+                except Exception as e:
+                    last_err = e
+                    if attempt < self.provider_retries - 1:
+                        await asyncio.sleep(self.provider_retry_delay)
+            if last_err is not None:
+                return await self._fail(str(last_err), history, system_prompts)
+            try:
+                msg = await self._parse_stream(resp)
+            except Exception as e:
+                return await self._fail(str(e), history, system_prompts)
             history.append(msg)
             if not msg.tool_calls:
                 break
-            tool_msgs = await asyncio.gather(*[self._run_tool(tc) for tc in msg.tool_calls])
-            for tool_msg in tool_msgs:
+            tool_msgs = await asyncio.gather(*[self._run_tool(tc) for tc in msg.tool_calls], return_exceptions=True)
+            for tc, tool_msg in zip(msg.tool_calls, tool_msgs):
+                if isinstance(tool_msg, BaseException):
+                    tool_msg = ToolMessage(tc.id, f"Error: {tool_msg}", tc.name, tc.arguments)
                 history.append(tool_msg)
                 await self._emit(Chunk('tool_result', tool_msg))
-        return history[len(system_prompts):]
+        return None, history[len(system_prompts):]
+
+    async def _fail(self, err: str, history: list[Message], system_prompts: Sequence[Message]) -> tuple[str, Sequence[Message]]:
+        await self._emit(Chunk('error', err))
+        self._clean_history(history)
+        return err, history[len(system_prompts):]
+
+    def _clean_history(self, history: list[Message]) -> list[Message]:
+        while history and isinstance(history[-1], AssistantMessage) and history[-1].tool_calls:
+            history.pop()
+        return history
 
     async def _parse_stream(self, stream: Any) -> AssistantMessage:
         content = ""
@@ -118,7 +147,9 @@ class AgentCore:
         if not tool:
             return ToolMessage(tc.id, f"Error: tool '{name}' not found", name, args)
         try:
-            result = await tool.run(**(json.loads(args) if args else {}))
+            result = await asyncio.wait_for(tool.run(**(json.loads(args) if args else {})), timeout=self.tool_timeout)
+        except asyncio.TimeoutError:
+            result = f"Error: tool '{name}' timed out after {self.tool_timeout}s"
         except Exception as e:
             result = f"Error: {e}"
         return ToolMessage(tc.id, result, name, args)
