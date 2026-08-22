@@ -20,6 +20,19 @@ class AgentCore:
         self.set_tools(tools)
         self.set_provider(provider)
         
+
+    def set_tools(self, tools: Sequence[BaseTool]):
+        self.tools = tools
+        self._tool_map = {t.name: t for t in tools}
+        
+    def set_provider(self, provider: Provider) -> None:
+        self.provider = provider
+        self._client = AsyncOpenAI(
+            api_key=provider.api_key,
+            base_url=provider.api_base,
+            timeout=self.timeout,
+        )
+
     def on_chunk(self) -> Callable[[Callable[[Chunk], Awaitable[None]]], Callable[[Chunk], Awaitable[None]]]:
         def decorator(f: Callable[[Chunk], Awaitable[None]]) -> Callable[[Chunk], Awaitable[None]]:
             self._listeners.append(f)
@@ -40,17 +53,6 @@ class AgentCore:
         for fn in self._message_listeners:
             await fn(message)
     
-    def set_tools(self, tools: Sequence[BaseTool]):
-        self.tools = tools
-        self._tool_map = {t.name: t for t in tools}
-        
-    def set_provider(self, provider: Provider) -> None:
-        self.provider = provider
-        self._client = AsyncOpenAI(
-            api_key=provider.api_key,
-            base_url=provider.api_base,
-            timeout=self.timeout,
-        )
 
     async def chat(self, messages: Sequence[Message], system_prompts: Sequence[Message] = []) -> tuple[str | None, Sequence[Message]]:
         history = list(system_prompts) + list(messages)
