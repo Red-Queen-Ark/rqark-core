@@ -4,8 +4,6 @@ from rqark_core.types.prompt import BasePrompt
 
 
 class AgentsMdPrompt(BasePrompt):
-    """Reads AGENTS.md from the project root and feeds it as context."""
-
     priority = 50
 
     def __init__(self, cwd: Path | None = None):

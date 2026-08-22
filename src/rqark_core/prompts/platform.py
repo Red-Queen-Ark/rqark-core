@@ -10,8 +10,6 @@ _PLATFORM_HINTS: dict[str, str] = {
 
 
 class PlatformPrompt(BasePrompt):
-    """Injects the current platform info so the LLM uses the right CLI syntax."""
-
     priority = 30
 
     def get_messages(self) -> str:

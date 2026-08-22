@@ -2,8 +2,6 @@ from rqark_core.types.prompt import BasePrompt
 
 
 class RolePrompt(BasePrompt):
-    """Injects the agent name and user name for a more natural conversation."""
-
     priority = 10
 
     def __init__(self, agent_name: str = 'Red Queen Ark', user_name: str = 'Sir') -> None:

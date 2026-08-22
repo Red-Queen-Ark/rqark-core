@@ -1,8 +1,6 @@
 from rqark_core.types.prompt import BasePrompt
 
 class CharacterPrompt(BasePrompt):
-    """Injects character identity and behavioral rules for natural conversation."""
-
     priority = 15
 
     def __init__(self, identity: str = '', personality: str = '') -> None:
