@@ -8,7 +8,7 @@ from openai import AsyncOpenAI
 from rqark_core.types.provider import Provider
 from rqark_core.types.tool import BaseTool
 from rqark_core.types.prompt import BasePrompt
-from rqark_core.types.chat import Chunk, Message, AssistantMessage, ToolMessage, SystemMessage, ToolCall, Usage
+from rqark_core.types.chat import Chunk, Message, AssistantMessage, ToolMessage, SystemMessage, ToolCall, Usage, SubAgentChunk, SubAgentMessage
 
 class AgentCore:
     def __init__(self):
@@ -18,6 +18,8 @@ class AgentCore:
         self.provider_retry_delay = 1
         self._listeners: list[Callable[[Chunk], Awaitable[None]]] = []
         self._message_listeners: list[Callable[[Message], Awaitable[None]]] = []
+        self._subagent_chunk_listeners: list[Callable[[SubAgentChunk], Awaitable[None]]] = []
+        self._subagent_message_listeners: list[Callable[[SubAgentMessage], Awaitable[None]]] = []
 
     async def chat(
         self, 
@@ -81,6 +83,18 @@ class AgentCore:
             return f
         return decorator
 
+    def on_subagent_chunk(self) -> Callable[[Callable[[SubAgentChunk], Awaitable[None]]], Callable[[SubAgentChunk], Awaitable[None]]]:
+        def decorator(f: Callable[[SubAgentChunk], Awaitable[None]]) -> Callable[[SubAgentChunk], Awaitable[None]]:
+            self._subagent_chunk_listeners.append(f)
+            return f
+        return decorator
+
+    def on_subagent_message(self) -> Callable[[Callable[[SubAgentMessage], Awaitable[None]]], Callable[[SubAgentMessage], Awaitable[None]]]:
+        def decorator(f: Callable[[SubAgentMessage], Awaitable[None]]) -> Callable[[SubAgentMessage], Awaitable[None]]:
+            self._subagent_message_listeners.append(f)
+            return f
+        return decorator
+
     async def _emit_chuck(self, chunk: Chunk) -> None:
         for fn in self._listeners:
             await fn(chunk)
@@ -88,6 +102,14 @@ class AgentCore:
     async def _emit_message(self, message: Message) -> None:
         for fn in self._message_listeners:
             await fn(message)
+
+    async def _emit_subagent_chunk(self, id: str, chunk: Chunk) -> None:
+        for fn in self._subagent_chunk_listeners:
+            await fn(SubAgentChunk(id, chunk))
+
+    async def _emit_subagent_message(self, id: str, message: Message) -> None:
+        for fn in self._subagent_message_listeners:
+            await fn(SubAgentMessage(id, message))
 
     def _get_client(self, provider: Provider):
         return AsyncOpenAI(

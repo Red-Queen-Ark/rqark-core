@@ -5,7 +5,7 @@ from rqark_core.core import AgentCore
 from rqark_core.types.tool import BaseTool
 from rqark_core.types.prompt import BasePrompt
 from rqark_core.types.provider import Provider
-from rqark_core.types.chat import UserMessage, SubAgentChunk, SubAgentMessage
+from rqark_core.types.chat import Chunk, Message, UserMessage
 
 tool_prompt = """
 ## Subagent
@@ -60,8 +60,17 @@ class SubAgent(BaseTool):
         prompt: str | None = kwargs.get('prompt')
         if prompt is None:
             raise TypeError()
-        messgaes = [ UserMessage(prompt) ]
         core = AgentCore()
+
+        @core.on_chunk()
+        async def forward_chunk(chunk: Chunk):
+            await self.parent_core._emit_subagent_chunk(id, chunk)
+
+        @core.on_message()
+        async def forward_message(message: Message):
+            await self.parent_core._emit_subagent_message(id, message)
+
+        messgaes = [ UserMessage(prompt) ]
         error, new_messgaes = await core.chat(provider=self.provider, messages=messgaes, prompts=self.prompts, tools=self.tools)
         if error:
             return error
