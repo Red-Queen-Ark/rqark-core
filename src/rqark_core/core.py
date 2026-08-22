@@ -41,7 +41,6 @@ class AgentCore:
     async def chat(self, messages: Sequence[Message], system_prompts: Sequence[Message] = []) -> Sequence[Message]:
         history = list(system_prompts) + list(messages)
         while True:
-            # params
             params: dict[str, Any] = {
                 "model": self.provider.model_name,
                 "messages": [ m.to_dict() for m in history ],
@@ -50,7 +49,6 @@ class AgentCore:
             }
             if self.tools:
                 params["tools"] = [t.get_openai_schema() for t in self.tools]
-            # chat
             resp = await self._client.chat.completions.create(**params)
             msg = await self._parse_stream(resp)
             history.append(msg)
