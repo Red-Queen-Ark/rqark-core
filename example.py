@@ -21,7 +21,7 @@ tools = [
     WebFetch(),
 ]
 
-core = AgentCore(provider, tools)
+core = AgentCore()
 
 last_chunk_type = Chunk('reasoning_content', '')
 
@@ -53,7 +53,7 @@ async def main() -> None:
     for prompt in prompts:
         if p := prompt.get_messages():
             system_prompts[0].content += p
-    error, new_messgaes = await core.chat(messgaes, system_prompts)
+    error, new_messgaes = await core.chat(messgaes, system_prompts, provider, tools)
 
 if __name__ == "__main__":
     asyncio.run(main())

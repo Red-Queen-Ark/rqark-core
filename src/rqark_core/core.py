@@ -10,65 +10,37 @@ from rqark_core.types.tool import BaseTool
 from rqark_core.types.chat import Chunk, Message, AssistantMessage, ToolMessage, ToolCall, Usage
 
 class AgentCore:
-    def __init__(self, provider: Provider, tools: Sequence[BaseTool] = []):
+    def __init__(self):
         self.timeout = 5
         self.tool_timeout = 30
         self.provider_retries = 3
         self.provider_retry_delay = 1
         self._listeners: list[Callable[[Chunk], Awaitable[None]]] = []
         self._message_listeners: list[Callable[[Message], Awaitable[None]]] = []
-        self.set_tools(tools)
-        self.set_provider(provider)
-        
 
-    def set_tools(self, tools: Sequence[BaseTool]):
-        self.tools = tools
-        self._tool_map = {t.name: t for t in tools}
-        
-    def set_provider(self, provider: Provider) -> None:
-        self.provider = provider
-        self._client = AsyncOpenAI(
+    async def chat(self, messages: Sequence[Message], system_prompts: Sequence[Message] = [], provider: Provider | None = None, tools: Sequence[BaseTool] | None = None) -> tuple[str | None, Sequence[Message]]:
+        if provider is None:
+            raise ValueError("provider is required")
+        client = AsyncOpenAI(
             api_key=provider.api_key,
             base_url=provider.api_base,
             timeout=self.timeout,
         )
-
-    def on_chunk(self) -> Callable[[Callable[[Chunk], Awaitable[None]]], Callable[[Chunk], Awaitable[None]]]:
-        def decorator(f: Callable[[Chunk], Awaitable[None]]) -> Callable[[Chunk], Awaitable[None]]:
-            self._listeners.append(f)
-            return f
-        return decorator
-
-    def on_message(self) -> Callable[[Callable[[Message], Awaitable[None]]], Callable[[Message], Awaitable[None]]]:
-        def decorator(f: Callable[[Message], Awaitable[None]]) -> Callable[[Message], Awaitable[None]]:
-            self._message_listeners.append(f)
-            return f
-        return decorator
-
-    async def _emit(self, chunk: Chunk) -> None:
-        for fn in self._listeners:
-            await fn(chunk)
-
-    async def _emit_message(self, message: Message) -> None:
-        for fn in self._message_listeners:
-            await fn(message)
-    
-
-    async def chat(self, messages: Sequence[Message], system_prompts: Sequence[Message] = []) -> tuple[str | None, Sequence[Message]]:
+        tool_map = {t.name: t for t in tools} if tools else {}
         history = list(system_prompts) + list(messages)
         while True:
             params: dict[str, Any] = {
-                "model": self.provider.model_name,
+                "model": provider.model_name,
                 "messages": [ m.to_dict() for m in history ],
                 "stream": True,
                 "stream_options": {"include_usage": True},
             }
-            if self.tools:
-                params["tools"] = [t.get_openai_schema() for t in self.tools]
+            if tools:
+                params["tools"] = [t.get_openai_schema() for t in tools]
             last_err: Exception | None = None
             for attempt in range(self.provider_retries):
                 try:
-                    resp = await self._client.chat.completions.create(**params)
+                    resp = await client.chat.completions.create(**params)
                     last_err = None
                     break
                 except Exception as e:
@@ -85,17 +57,37 @@ class AgentCore:
             await self._emit_message(msg)
             if not msg.tool_calls:
                 break
-            tool_msgs = await asyncio.gather(*[self._run_tool(tc) for tc in msg.tool_calls], return_exceptions=True)
+            tool_msgs = await asyncio.gather(*[self._run_tool(tc, tool_map) for tc in msg.tool_calls], return_exceptions=True)
             for tc, tool_msg in zip(msg.tool_calls, tool_msgs):
                 if isinstance(tool_msg, BaseException):
                     tool_msg = ToolMessage(tc.id, f"Error: {tool_msg}", tc.name, tc.arguments)
                 history.append(tool_msg)
                 await self._emit_message(tool_msg)
-                await self._emit(Chunk('tool_result', tool_msg))
+                await self._emit_chuck(Chunk('tool_result', tool_msg))
         return None, history[len(system_prompts):]
 
+    def on_chunk(self) -> Callable[[Callable[[Chunk], Awaitable[None]]], Callable[[Chunk], Awaitable[None]]]:
+        def decorator(f: Callable[[Chunk], Awaitable[None]]) -> Callable[[Chunk], Awaitable[None]]:
+            self._listeners.append(f)
+            return f
+        return decorator
+
+    def on_message(self) -> Callable[[Callable[[Message], Awaitable[None]]], Callable[[Message], Awaitable[None]]]:
+        def decorator(f: Callable[[Message], Awaitable[None]]) -> Callable[[Message], Awaitable[None]]:
+            self._message_listeners.append(f)
+            return f
+        return decorator
+
+    async def _emit_chuck(self, chunk: Chunk) -> None:
+        for fn in self._listeners:
+            await fn(chunk)
+
+    async def _emit_message(self, message: Message) -> None:
+        for fn in self._message_listeners:
+            await fn(message)
+
     async def _fail(self, err: str, history: list[Message], system_prompts: Sequence[Message]) -> tuple[str, Sequence[Message]]:
-        await self._emit(Chunk('error', err))
+        await self._emit_chuck(Chunk('error', err))
         self._clean_history(history)
         return err, history[len(system_prompts):]
 
@@ -118,11 +110,11 @@ class AgentCore:
             d = chunk.choices[0].delta
             if d.content:
                 content += d.content
-                await self._emit(Chunk('content', d.content))
+                await self._emit_chuck(Chunk('content', d.content))
             rc = getattr(d, "reasoning_content", None)
             if rc:
                 reasoning += rc
-                await self._emit(Chunk('reasoning_content', rc))
+                await self._emit_chuck(Chunk('reasoning_content', rc))
             if d.tool_calls:
                 for tc in d.tool_calls:
                     if tc.index not in tc_acc:
@@ -142,19 +134,19 @@ class AgentCore:
         tool_calls: list[ToolCall] | None = None
         if tc_acc:
             tool_calls = [self._to_tool_call(tc_acc[i]) for i in sorted(tc_acc)]
-            await self._emit(Chunk('tool_calls', tool_calls))
+            await self._emit_chuck(Chunk('tool_calls', tool_calls))
         if usage:
-            await self._emit(Chunk('usage', usage))
+            await self._emit_chuck(Chunk('usage', usage))
         assistant_message = AssistantMessage( content=content, tool_calls=tool_calls, reasoning_content=reasoning or None, usage=usage)
         return assistant_message
 
     def _to_tool_call(self, data: dict[str, Any]) -> ToolCall:
         return ToolCall(data["id"], data["type"], data["function"]["name"], data["function"]["arguments"])
 
-    async def _run_tool(self, tc: ToolCall) -> ToolMessage:
+    async def _run_tool(self, tc: ToolCall, tool_map: dict[str, BaseTool]) -> ToolMessage:
         name = tc.name
         args = tc.arguments
-        tool = self._tool_map.get(name)
+        tool = tool_map.get(name)
         if not tool:
             return ToolMessage(tc.id, f"Error: tool '{name}' not found", name, args)
         try:

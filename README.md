@@ -86,7 +86,9 @@ provider = Provider('inhouse', 'api_key', 'http://127.0.0.1:8080', 0)
 prompts = [DateTimePrompt(), RolePrompt(), PlatformPrompt()]
 prompts.sort(key=lambda p: p.priority)
 
-core = AgentCore(provider, [WebSearch(), WebFetch(), ReadFile(), WriteFile()])
+tools = [WebSearch(), WebFetch(), ReadFile(), WriteFile()]
+
+core = AgentCore()
 
 
 @core.on_chunk()
@@ -99,7 +101,7 @@ async def main():
     for prompt in prompts:
         if p := prompt.get_messages():
             system_prompts[0].content += p
-    error, messages = await core.chat([UserMessage('今日天氣')], system_prompts)
+    error, messages = await core.chat([UserMessage('今日天氣')], system_prompts, provider, tools)
 
 
 asyncio.run(main())
