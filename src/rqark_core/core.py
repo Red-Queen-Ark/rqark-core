@@ -7,6 +7,7 @@ from openai import AsyncOpenAI
 
 from rqark_core.types.provider import Provider
 from rqark_core.types.tool import BaseTool
+from rqark_core.types.prompt import BasePrompt
 from rqark_core.types.chat import Chunk, Message, AssistantMessage, ToolMessage, SystemMessage, ToolCall, Usage
 
 class AgentCore:
@@ -22,12 +23,13 @@ class AgentCore:
         self, 
         provider: Provider, 
         messages: Sequence[Message], 
-        system_prompts: Sequence[Message] = [], 
+        prompts: Sequence[BasePrompt] = [], 
         tools: Sequence[BaseTool] = [],
     ) -> tuple[str | None, Sequence[Message]]:
         client = self._get_client(provider)
         tool_map = self._get_tool_map(tools)
         tool_prompts = self._get_tool_prompts(tools)
+        system_prompts = self._get_system_prompts(prompts)
         history, system_count = self._build_history(provider, system_prompts, tool_prompts, messages)
         while True:
             params: dict[str, Any] = {
@@ -94,6 +96,14 @@ class AgentCore:
             timeout=self.timeout,
         )
 
+    def _get_system_prompts(self, prompts: Sequence[BasePrompt]):
+        system_prompts = []
+        for prompt in prompts:
+            if content := prompt.get_messages():
+                p = SystemMessage(content)
+                system_prompts.append(p)
+        return system_prompts
+        
     def _get_tool_prompts(self, tools: Sequence[BaseTool]):
         tool_prompts = []
         for tool in tools:

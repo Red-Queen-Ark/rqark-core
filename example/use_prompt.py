@@ -1,30 +1,19 @@
 import asyncio
-from typing import Sequence
-
 from rqark_core.core import AgentCore
 from rqark_core.types.provider import Provider
-from rqark_core.types.chat import UserMessage, SystemMessage, ToolMessage, Chunk, Message
-from rqark_core.prompts import DateTimePrompt, RolePrompt, PlatformPrompt
-from rqark_core.tools import WebSearch, WebFetch
+from rqark_core.types.chat import UserMessage, ToolMessage, Chunk, Message
+from rqark_core.prompts import DateTimePrompt 
 
 provider = Provider('inhouse', 'api_key', 'http://127.0.0.1:8080', 0, combine=True)
 
 prompts = [
-    DateTimePrompt(),
-    RolePrompt(),
-    PlatformPrompt(),
+    DateTimePrompt()
 ]
 prompts.sort(key=lambda p:p.priority)
-
-tools = [
-    WebSearch(), 
-    WebFetch(),
-]
 
 core = AgentCore()
 
 last_chunk_type = Chunk('reasoning_content', '')
-
 @core.on_chunk()
 async def print_chunk(chunk: Chunk):
     global last_chunk_type
@@ -48,9 +37,8 @@ async def print_message(message: Message):
     print(f'[message] {type(message).__name__}')
 
 async def main() -> None:
-    messgaes = [ UserMessage('今日天氣') ]
-    system_prompts = [ SystemMessage(prompt.get_messages()) for prompt in prompts ]
-    error, new_messgaes = await core.chat(provider=provider, messages=messgaes, system_prompts=system_prompts, tools=tools)
+    messgaes = [ UserMessage('現在幾點?') ]
+    error, new_messgaes = await core.chat(provider=provider, messages=messgaes, prompts=prompts)
 
 if __name__ == "__main__":
     asyncio.run(main())
