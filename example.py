@@ -7,7 +7,7 @@ from rqark_core.types.chat import UserMessage, SystemMessage, ToolMessage, Chunk
 from rqark_core.prompts import DateTimePrompt, RolePrompt, PlatformPrompt
 from rqark_core.tools import WebSearch, WebFetch
 
-provider = Provider('inhouse', 'api_key', 'http://127.0.0.1:8080', 0)
+provider = Provider('inhouse', 'api_key', 'http://127.0.0.1:8080', 0, combine=True)
 
 prompts = [
     DateTimePrompt(),
@@ -49,11 +49,8 @@ async def print_message(message: Message):
 
 async def main() -> None:
     messgaes = [ UserMessage('今日天氣') ]
-    system_prompts = [ SystemMessage('') ]
-    for prompt in prompts:
-        if p := prompt.get_messages():
-            system_prompts[0].content += p
-    error, new_messgaes = await core.chat(messgaes, system_prompts, provider, tools)
+    system_prompts = [ SystemMessage(prompt.get_messages()) for prompt in prompts ]
+    error, new_messgaes = await core.chat(provider=provider, messages=messgaes, system_prompts=system_prompts, tools=tools)
 
 if __name__ == "__main__":
     asyncio.run(main())

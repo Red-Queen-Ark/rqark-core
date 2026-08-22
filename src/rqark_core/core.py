@@ -7,7 +7,7 @@ from openai import AsyncOpenAI
 
 from rqark_core.types.provider import Provider
 from rqark_core.types.tool import BaseTool
-from rqark_core.types.chat import Chunk, Message, AssistantMessage, ToolMessage, ToolCall, Usage
+from rqark_core.types.chat import Chunk, Message, AssistantMessage, ToolMessage, SystemMessage, ToolCall, Usage
 
 class AgentCore:
     def __init__(self):
@@ -20,20 +20,15 @@ class AgentCore:
 
     async def chat(
         self, 
+        provider: Provider, 
         messages: Sequence[Message], 
         system_prompts: Sequence[Message] = [], 
-        provider: Provider | None = None, 
-        tools: Sequence[BaseTool] | None = None
+        tools: Sequence[BaseTool] = [],
     ) -> tuple[str | None, Sequence[Message]]:
-        if provider is None:
-            raise ValueError("provider is required")
-        client = AsyncOpenAI(
-            api_key=provider.api_key,
-            base_url=provider.api_base,
-            timeout=self.timeout,
-        )
-        tool_map = {t.name: t for t in tools} if tools else {}
-        history = list(system_prompts) + list(messages)
+        client = self._get_client(provider)
+        tool_map = self._get_tool_map(tools)
+        tool_prompts = self._get_tool_prompts(tools)
+        history, system_count = self._build_history(provider, system_prompts, tool_prompts, messages)
         while True:
             params: dict[str, Any] = {
                 "model": provider.model_name,
@@ -54,11 +49,11 @@ class AgentCore:
                     if attempt < self.provider_retries - 1:
                         await asyncio.sleep(self.provider_retry_delay)
             if last_err is not None:
-                return await self._fail(str(last_err), history, system_prompts)
+                return await self._fail(str(last_err), history, system_count)
             try:
                 msg = await self._parse_stream(resp)
             except Exception as e:
-                return await self._fail(str(e), history, system_prompts)
+                return await self._fail(str(e), history, system_count)
             history.append(msg)
             await self._emit_message(msg)
             if not msg.tool_calls:
@@ -70,7 +65,7 @@ class AgentCore:
                 history.append(tool_msg)
                 await self._emit_message(tool_msg)
                 await self._emit_chuck(Chunk('tool_result', tool_msg))
-        return None, history[len(system_prompts):]
+        return None, history[system_count:]
 
     def on_chunk(self) -> Callable[[Callable[[Chunk], Awaitable[None]]], Callable[[Chunk], Awaitable[None]]]:
         def decorator(f: Callable[[Chunk], Awaitable[None]]) -> Callable[[Chunk], Awaitable[None]]:
@@ -92,10 +87,40 @@ class AgentCore:
         for fn in self._message_listeners:
             await fn(message)
 
-    async def _fail(self, err: str, history: list[Message], system_prompts: Sequence[Message]) -> tuple[str, Sequence[Message]]:
+    def _get_client(self, provider: Provider):
+        return AsyncOpenAI(
+            api_key=provider.api_key,
+            base_url=provider.api_base,
+            timeout=self.timeout,
+        )
+
+    def _get_tool_prompts(self, tools: Sequence[BaseTool]):
+        tool_prompts = []
+        for tool in tools:
+            if tool.tool_prompt:
+                prompt = SystemMessage(tool.tool_prompt)
+                tool_prompts.append(prompt)
+        return tool_prompts
+
+    def _build_history(
+        self,
+        provider: Provider,
+        system_prompts: Sequence[Message],
+        tool_prompts: Sequence[Message],
+        messages: Sequence[Message],
+    ) -> tuple[list[Message], int]:
+        head = list(system_prompts) + list(tool_prompts)
+        if provider.combine and head:
+            head = [SystemMessage("\n".join(m.content for m in head))]
+        return head + list(messages), len(head)
+
+    def _get_tool_map(self, tools: Sequence[BaseTool]):
+        return {t.name: t for t in tools} if tools else {}
+
+    async def _fail(self, err: str, history: list[Message], system_count: int) -> tuple[str, Sequence[Message]]:
         await self._emit_chuck(Chunk('error', err))
         self._clean_history(history)
-        return err, history[len(system_prompts):]
+        return err, history[system_count:]
 
     def _clean_history(self, history: list[Message]) -> list[Message]:
         while history and isinstance(history[-1], AssistantMessage) and history[-1].tool_calls:

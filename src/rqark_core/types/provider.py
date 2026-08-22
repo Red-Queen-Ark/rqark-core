@@ -53,7 +53,8 @@ class Provider:
     seed: int | None = None
     frequency_penalty: float | None = None
     presence_penalty: float | None = None
-
+    combine: bool = False
+            
     def __post_init__(self):
         if not self.name:
             self.name = self.model_name
