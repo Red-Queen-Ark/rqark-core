@@ -40,7 +40,6 @@ class WebFetch(BaseTool):
 
     @staticmethod
     def _clean_html(text: str, max_lines: int = 200) -> str:
-        """Strip scripts, styles, and tags from HTML, returning plain text."""
         text = re.sub(r'<script[\s\S]*?</script>', '', text, flags=re.I)
         text = re.sub(r'<style[\s\S]*?</style>', '', text, flags=re.I)
         text = re.sub(r'<[^>]+>', '', text)

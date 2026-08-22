@@ -5,7 +5,7 @@ from rqark_core.func.epistemic import KEYWORD_BLACKLIST, URL_BLACKLIST, domain_m
 
 DDGS: Any = None
 try:
-    from ddgs import DDGS as _DDGS  # noqa: PLC0415
+    from ddgs import DDGS as _DDGS
     DDGS = _DDGS
 except ImportError:
     pass
