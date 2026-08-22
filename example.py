@@ -7,14 +7,8 @@ from rqark_core.types.chat import UserMessage, SystemMessage, ToolMessage, Chunk
 from rqark_core.prompts import DateTimePrompt, RolePrompt, PlatformPrompt
 from rqark_core.tools import WebSearch, WebFetch
 
-"""
-Provider
-"""
 provider = Provider('inhouse', 'api_key', 'http://127.0.0.1:8080', 0)
 
-"""
-Prompts
-"""
 prompts = [
     DateTimePrompt(),
     RolePrompt(),
@@ -22,22 +16,13 @@ prompts = [
 ]
 prompts.sort(key=lambda p:p.priority)
 
-"""
-Tools
-"""
 tools = [
     WebSearch(), 
     WebFetch(),
 ]
 
-"""
-Core
-"""
 core = AgentCore(provider, tools)
 
-"""
-Core Chat Event
-"""
 last_chunk_type = Chunk('reasoning_content', '')
 
 @core.on_event()
