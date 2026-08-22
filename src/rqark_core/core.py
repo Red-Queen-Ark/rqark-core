@@ -1,5 +1,6 @@
 import asyncio
 import json
+import traceback
 from collections.abc import Awaitable, Callable, Sequence
 from typing import Any
 
@@ -13,7 +14,7 @@ from rqark_core.types.chat import Chunk, Message, AssistantMessage, ToolMessage,
 class AgentCore:
     def __init__(self):
         self.timeout = 5
-        self.tool_timeout = 30
+        self.tool_timeout = 120
         self.provider_retries = 3
         self.provider_retry_delay = 1
         self._listeners: list[Callable[[Chunk], Awaitable[None]]] = []
@@ -43,7 +44,9 @@ class AgentCore:
             if tools:
                 params["tools"] = [t.get_openai_schema() for t in tools]
             last_err: Exception | None = None
+            attempts = 0
             for attempt in range(self.provider_retries):
+                attempts = attempt + 1
                 try:
                     resp = await client.chat.completions.create(**params)
                     last_err = None
@@ -53,11 +56,11 @@ class AgentCore:
                     if attempt < self.provider_retries - 1:
                         await asyncio.sleep(self.provider_retry_delay)
             if last_err is not None:
-                return await self._fail(str(last_err), history, system_count)
+                return await self._fail(str(last_err), history, system_count, 'request', attempts, provider.model_name)
             try:
                 msg = await self._parse_stream(resp)
             except Exception as e:
-                return await self._fail(str(e), history, system_count)
+                return await self._fail(str(e), history, system_count, 'stream', attempts, provider.model_name)
             history.append(msg)
             await self._emit_message(msg)
             if not msg.tool_calls:
@@ -97,19 +100,33 @@ class AgentCore:
 
     async def _emit_chuck(self, chunk: Chunk) -> None:
         for fn in self._listeners:
-            await fn(chunk)
+            try:
+                await fn(chunk)
+            except Exception:
+                traceback.print_exc()
 
     async def _emit_message(self, message: Message) -> None:
         for fn in self._message_listeners:
-            await fn(message)
+            try:
+                await fn(message)
+            except Exception:
+                traceback.print_exc()
 
     async def _emit_subagent_chunk(self, id: str, chunk: Chunk) -> None:
+        event = SubAgentChunk(id, chunk)
         for fn in self._subagent_chunk_listeners:
-            await fn(SubAgentChunk(id, chunk))
+            try:
+                await fn(event)
+            except Exception:
+                traceback.print_exc()
 
     async def _emit_subagent_message(self, id: str, message: Message) -> None:
+        event = SubAgentMessage(id, message)
         for fn in self._subagent_message_listeners:
-            await fn(SubAgentMessage(id, message))
+            try:
+                await fn(event)
+            except Exception:
+                traceback.print_exc()
 
     def _get_client(self, provider: Provider):
         return AsyncOpenAI(
@@ -150,8 +167,16 @@ class AgentCore:
     def _get_tool_map(self, tools: Sequence[BaseTool]):
         return {t.name: t for t in tools} if tools else {}
 
-    async def _fail(self, err: str, history: list[Message], system_count: int) -> tuple[str, Sequence[Message]]:
-        await self._emit_chuck(Chunk('error', err))
+    async def _fail(
+        self,
+        err: str,
+        history: list[Message],
+        system_count: int,
+        stage: str = 'request',
+        attempts: int = 1,
+        model_name: str = '',
+    ) -> tuple[str, Sequence[Message]]:
+        await self._emit_chuck(Chunk('error', f'[stage={stage} attempts={attempts} model={model_name}] {err}'))
         self._clean_history(history)
         return err, history[system_count:]
 
