@@ -12,18 +12,10 @@ from rqark_core.types.chat import Chunk, Message, AssistantMessage, ToolMessage,
 class AgentCore:
     def __init__(self, provider: Provider, tools: list[BaseTool] = []):
         self.timeout = 5
-        
-        self.tools = tools
-        self._tool_map = {t.name(): t for t in tools}
         self._listeners: list[Callable[[Chunk], Awaitable[None]]] = []
+        self.set_tools(tools)
+        self.set_provider(provider)
         
-        self.provider = provider
-        self._client = AsyncOpenAI(
-            api_key=provider.api_key,
-            base_url=provider.api_base,
-            timeout=self.timeout,
-        )
-
     def on_event(self) -> Callable[[Callable[[Chunk], Awaitable[None]]], Callable[[Chunk], Awaitable[None]]]:
         def decorator(f: Callable[[Chunk], Awaitable[None]]) -> Callable[[Chunk], Awaitable[None]]:
             self._listeners.append(f)
@@ -33,6 +25,10 @@ class AgentCore:
     async def _emit(self, chunk: Chunk) -> None:
         for fn in self._listeners:
             await fn(chunk)
+    
+    def set_tools(self, tools: list[BaseTool]):
+        self.tools = tools
+        self._tool_map = {t.name(): t for t in tools}
         
     def set_provider(self, provider: Provider) -> None:
         self.provider = provider
