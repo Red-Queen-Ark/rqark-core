@@ -1,7 +1,6 @@
-from libs.content._base import Prompt
+from rqark_core.types.prompt import BasePrompt
 
-
-class CharacterPrompt(Prompt):
+class CharacterPrompt(BasePrompt):
     """Injects character identity and behavioral rules for natural conversation."""
 
     priority = 15
