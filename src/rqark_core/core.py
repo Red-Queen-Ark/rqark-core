@@ -1,3 +1,4 @@
+import asyncio
 import json
 from collections.abc import Awaitable, Callable, Sequence
 from typing import Any, cast
@@ -10,7 +11,7 @@ from rqark_core.types.chat import Chunk, Message, AssistantMessage, ToolMessage,
 
 
 class AgentCore:
-    def __init__(self, provider: Provider, tools: list[BaseTool] = []):
+    def __init__(self, provider: Provider, tools: Sequence[BaseTool] = []):
         self.timeout = 5
         self._listeners: list[Callable[[Chunk], Awaitable[None]]] = []
         self.set_tools(tools)
@@ -26,7 +27,7 @@ class AgentCore:
         for fn in self._listeners:
             await fn(chunk)
     
-    def set_tools(self, tools: list[BaseTool]):
+    def set_tools(self, tools: Sequence[BaseTool]):
         self.tools = tools
         self._tool_map = {t.name(): t for t in tools}
         
@@ -56,8 +57,8 @@ class AgentCore:
             history.append(msg)
             if not msg.tool_calls:
                 break
-            for tc in msg.tool_calls:
-                tool_msg = await self._run_tool(tc)
+            tool_msgs = await asyncio.gather(*[self._run_tool(tc) for tc in msg.tool_calls])
+            for tool_msg in tool_msgs:
                 history.append(tool_msg)
                 await self._emit(Chunk('tool_result', tool_msg))
         return history
