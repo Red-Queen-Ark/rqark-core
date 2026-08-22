@@ -9,7 +9,6 @@ provider = Provider('inhouse', 'api_key', 'http://127.0.0.1:8080', 0, combine=Tr
 prompts = [
     DateTimePrompt()
 ]
-prompts.sort(key=lambda p:p.priority)
 
 core = AgentCore()
 

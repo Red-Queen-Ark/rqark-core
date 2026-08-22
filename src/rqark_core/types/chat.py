@@ -75,3 +75,13 @@ type Message = UserMessage | ToolMessage | AssistantMessage | SystemMessage
 class Chunk:
     type: ChunkType
     content: str | ToolMessage | list[ToolCall] | Usage
+
+@dataclass
+class SubAgentMessage:
+    id: str
+    message: Message
+
+@dataclass
+class SubAgentChunk:
+    id: str
+    chunk: Chunk

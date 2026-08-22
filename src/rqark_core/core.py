@@ -98,7 +98,8 @@ class AgentCore:
 
     def _get_system_prompts(self, prompts: Sequence[BasePrompt]):
         system_prompts = []
-        for prompt in prompts:
+        _prompts = sorted(prompts, key=lambda p:p.priority)
+        for prompt in _prompts:
             if content := prompt.get_messages():
                 p = SystemMessage(content)
                 system_prompts.append(p)

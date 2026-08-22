@@ -6,6 +6,7 @@ from .read_file import ReadFile
 from .web_fetch import WebFetch
 from .web_search import WebSearch
 from .write_file import WriteFile
+from .subagent import SubAgent
 
 __all__ = [
     'EditFile',
@@ -16,4 +17,5 @@ __all__ = [
     'WebFetch',
     'WebSearch',
     'WriteFile',
+    'SubAgent',
 ]

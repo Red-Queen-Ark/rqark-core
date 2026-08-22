@@ -12,7 +12,6 @@ prompts = [
     RolePrompt(),
     PlatformPrompt(),
 ]
-prompts.sort(key=lambda p:p.priority)
 
 tools = [
     WebSearch(), 
