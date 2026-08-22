@@ -116,8 +116,6 @@ def _edit_file_content(fp: Path, old_string: str, new_string: str, replace_all: 
 
 
 class EditFile(BaseTool):
-    catalog_group: str = 'write'
-
     @property
     def name(self) -> str:
         return 'edit_file'

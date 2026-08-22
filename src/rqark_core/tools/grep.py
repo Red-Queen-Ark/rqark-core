@@ -13,7 +13,6 @@ MB: int = 1_000_000
 class Grep(BaseTool):
     MAX_MATCHES: int = 200
     MAX_FILE_SIZE: int = MB
-    catalog_group: str = 'read'
 
     @property
     def name(self) -> str:

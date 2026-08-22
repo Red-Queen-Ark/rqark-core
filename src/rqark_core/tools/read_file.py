@@ -7,7 +7,6 @@ from rqark_core.types.tool import BaseTool
 
 class ReadFile(BaseTool):
     DEFAULT_LIMIT: int = 2000
-    catalog_group: str = 'read'
 
     @property
     def name(self) -> str:

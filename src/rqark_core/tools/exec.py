@@ -71,7 +71,6 @@ async def _kill_proc(proc: asyncio.subprocess.Process) -> None:
 
 class Exec(BaseTool):
     DEFAULT_TIMEOUT: int = 60
-    catalog_group: str = 'write'
 
     @property
     def name(self) -> str:

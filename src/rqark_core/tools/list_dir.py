@@ -8,7 +8,6 @@ SKIP_DIRS: tuple[str, ...] = ('.git', 'node_modules', '.venv', 'venv', '__pycach
 
 
 class ListDir(BaseTool):
-    catalog_group: str = 'read'
 
     @property
     def name(self) -> str:

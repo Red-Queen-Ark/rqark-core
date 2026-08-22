@@ -9,7 +9,6 @@ from rqark_core.func.epistemic import grade_source
 
 class WebFetch(BaseTool):
     PROXY: str | None = None
-    catalog_group: str = 'read'
 
     @property
     def name(self) -> str:

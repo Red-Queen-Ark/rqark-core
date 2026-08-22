@@ -6,7 +6,6 @@ from rqark_core.types.tool import BaseTool
 
 
 class WriteFile(BaseTool):
-    catalog_group: str = 'write'
 
     @property
     def name(self) -> str:
