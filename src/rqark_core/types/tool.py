@@ -10,6 +10,10 @@ class BaseTool(ABC):
     def display_key(self) -> str:
         return ''
 
+    @property
+    def tool_prompt(self) -> str | None:
+        return None
+
     @abstractmethod
     def get_openai_schema(self) -> dict[str, Any]: ...
 
