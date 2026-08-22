@@ -18,7 +18,13 @@ class AgentCore:
         self._listeners: list[Callable[[Chunk], Awaitable[None]]] = []
         self._message_listeners: list[Callable[[Message], Awaitable[None]]] = []
 
-    async def chat(self, messages: Sequence[Message], system_prompts: Sequence[Message] = [], provider: Provider | None = None, tools: Sequence[BaseTool] | None = None) -> tuple[str | None, Sequence[Message]]:
+    async def chat(
+        self, 
+        messages: Sequence[Message], 
+        system_prompts: Sequence[Message] = [], 
+        provider: Provider | None = None, 
+        tools: Sequence[BaseTool] | None = None
+    ) -> tuple[str | None, Sequence[Message]]:
         if provider is None:
             raise ValueError("provider is required")
         client = AsyncOpenAI(
