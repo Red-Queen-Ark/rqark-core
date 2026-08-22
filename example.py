@@ -16,7 +16,8 @@ async def main() -> None:
         print(chunk)
 
     new_messgaes = await core.chat(messgaes)
-    
+    for nm in new_messgaes:
+        print(nm)
 
 if __name__ == "__main__":
     asyncio.run(main())

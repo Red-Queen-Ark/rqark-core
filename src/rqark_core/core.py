@@ -6,7 +6,7 @@ from openai import AsyncOpenAI
 
 from rqark_core.types.provider import Provider
 from rqark_core.types.tool import BaseTool
-from rqark_core.types.chat import Chunk, Message, AssistantMessage, ToolMessage, ToolCall
+from rqark_core.types.chat import Chunk, Message, AssistantMessage, ToolMessage, ToolCall, Usage
 
 
 class AgentCore:
@@ -46,6 +46,7 @@ class AgentCore:
                 "model": self.provider.model_name,
                 "messages": [ m.to_dict() for m in history ],
                 "stream": True,
+                "stream_options": {"include_usage": True},
             }
             if self.tools:
                 params["tools"] = [t.get_openai_schema() for t in self.tools]
@@ -64,9 +65,12 @@ class AgentCore:
     async def _parse_stream(self, stream: Any) -> AssistantMessage:
         content = ""
         reasoning = ""
+        usage: Usage | None = None
         tc_acc: dict[int, dict[str, Any]] = {}
 
         async for chunk in stream:
+            if chunk.usage:
+                usage = chunk.usage.model_dump(include={'prompt_tokens', 'completion_tokens', 'total_tokens'})
             if not chunk.choices:
                 continue
             d = chunk.choices[0].delta
@@ -98,10 +102,13 @@ class AgentCore:
         )
         if tool_calls:
             await self._emit(Chunk('tool_calls', tool_calls))
+        if usage:
+            await self._emit(Chunk('usage', usage))
         return AssistantMessage(
             content=content,
             tool_calls=tool_calls,
             reasoning_content=reasoning or None,
+            usage=usage,
         )
 
     async def _run_tool(self, tc: ToolCall) -> ToolMessage:

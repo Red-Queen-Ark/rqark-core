@@ -2,11 +2,16 @@ from dataclasses import dataclass, asdict
 from typing import Literal, TypedDict
 
 type Role = Literal['system', 'user', 'assistant', 'tool']
-type ChunkType = Literal['reasoning_content', 'content', 'tool_calls', 'tool_result']
+type ChunkType = Literal['reasoning_content', 'content', 'tool_calls', 'tool_result', 'usage']
 
 class FunctionCall(TypedDict):
     name: str
     arguments: str
+
+class Usage(TypedDict):
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
 
 
 class ToolCall(TypedDict):
@@ -49,6 +54,7 @@ class AssistantMessage:
     content: str = ''
     tool_calls: list[ToolCall] | None = None
     reasoning_content: str | None = None
+    usage: Usage | None = None
     role: Literal['assistant'] = 'assistant'
 
     def to_dict(self) -> dict:
@@ -70,7 +76,7 @@ type Message = UserMessage | ToolMessage | AssistantMessage | SystemMessage
 @dataclass
 class Chunk:
     type: ChunkType
-    content: list | str | ToolMessage
+    content: list | str | ToolMessage | Usage
     
     def __str__(self):
         return f"{self.type:18s}: {self.content}"
