@@ -3,8 +3,7 @@ from typing import Sequence
 
 from rqark_core.core import AgentCore
 from rqark_core.types.provider import Provider
-from rqark_core.types.chat import Message, UserMessage, SystemMessage, Chunk, ToolCall, FunctionCall
-from rqark_core.types.tool import BaseTool
+from rqark_core.types.chat import UserMessage, SystemMessage, ToolMessage, Chunk
 from rqark_core.prompts import DateTimePrompt, RolePrompt, PlatformPrompt
 from rqark_core.tools import WebSearch, WebFetch
 
@@ -52,9 +51,9 @@ async def print_chunk(chunk: Chunk):
         print(chunk.content, flush=True, end='')
     elif chunk.type == 'tool_calls' and isinstance(chunk.content, list):
         for call in chunk.content:
-            print(call['function']['name'])
-    elif chunk.type == 'tool_result':
-        print(chunk.content, flush=True, end='')
+            print(call.name, call.arguments)
+    elif chunk.type == 'tool_result' and isinstance(chunk.content, ToolMessage):
+        print(chunk.content.tool_name, chunk.content.content)
     last_chunk_type = chunk
         
 async def main() -> None:

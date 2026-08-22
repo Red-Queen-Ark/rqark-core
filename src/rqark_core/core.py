@@ -1,14 +1,13 @@
 import asyncio
 import json
 from collections.abc import Awaitable, Callable, Sequence
-from typing import Any, cast
+from typing import Any
 
 from openai import AsyncOpenAI
 
 from rqark_core.types.provider import Provider
 from rqark_core.types.tool import BaseTool
-from rqark_core.types.chat import Chunk, Message, AssistantMessage, ToolMessage, ToolCall, ToolCallChunk, Usage
-
+from rqark_core.types.chat import Chunk, Message, AssistantMessage, ToolMessage, ToolCall, Usage
 
 class AgentCore:
     def __init__(self, provider: Provider, tools: Sequence[BaseTool] = []):
@@ -67,11 +66,11 @@ class AgentCore:
         content = ""
         reasoning = ""
         usage: Usage | None = None
-        tc_acc: dict[int, ToolCallChunk] = {}
+        tc_acc: dict[int, dict[str, Any]] = {}
 
         async for chunk in stream:
             if chunk.usage:
-                usage = chunk.usage.model_dump(include={'prompt_tokens', 'completion_tokens', 'total_tokens'})
+                usage = Usage(**chunk.usage.model_dump(include={'prompt_tokens', 'completion_tokens', 'total_tokens'}))
             if not chunk.choices:
                 continue
             d = chunk.choices[0].delta
@@ -98,10 +97,9 @@ class AgentCore:
                         if tc.function.arguments:
                             acc["function"]["arguments"] += tc.function.arguments
 
-        tool_calls: list[ToolCall] | None = (
-            cast(list[ToolCall], [tc_acc[i] for i in sorted(tc_acc)]) or None
-        )
-        if tool_calls:
+        tool_calls: list[ToolCall] | None = None
+        if tc_acc:
+            tool_calls = [self._to_tool_call(tc_acc[i]) for i in sorted(tc_acc)]
             await self._emit(Chunk('tool_calls', tool_calls))
         if usage:
             await self._emit(Chunk('usage', usage))
@@ -112,14 +110,17 @@ class AgentCore:
             usage=usage,
         )
 
+    def _to_tool_call(self, data: dict[str, Any]) -> ToolCall:
+        return ToolCall(data["id"], data["type"], data["function"]["name"], data["function"]["arguments"])
+
     async def _run_tool(self, tc: ToolCall) -> ToolMessage:
-        name = tc["function"]["name"]
-        args = tc["function"]["arguments"]
+        name = tc.name
+        args = tc.arguments
         tool = self._tool_map.get(name)
         if not tool:
-            return ToolMessage(tc["id"], f"Error: tool '{name}' not found", name, args)
+            return ToolMessage(tc.id, f"Error: tool '{name}' not found", name, args)
         try:
             result = await tool.run(**(json.loads(args) if args else {}))
         except Exception as e:
             result = f"Error: {e}"
-        return ToolMessage(tc["id"], result, name, args)
+        return ToolMessage(tc.id, result, name, args)

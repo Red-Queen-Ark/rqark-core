@@ -1,29 +1,28 @@
 from dataclasses import dataclass, asdict
-from typing import Literal, TypedDict
+from typing import Literal
 
 type Role = Literal['system', 'user', 'assistant', 'tool']
 type ChunkType = Literal['reasoning_content', 'content', 'tool_calls', 'tool_result', 'usage']
 
-class FunctionCall(TypedDict):
-    name: str
-    arguments: str
-
-class Usage(TypedDict):
+@dataclass
+class Usage:
     prompt_tokens: int
     completion_tokens: int
     total_tokens: int
 
-
-class ToolCall(TypedDict):
+@dataclass
+class ToolCall:
     id: str
     type: Literal['function']
-    function: FunctionCall
+    name: str
+    arguments: str
 
-class ToolCallChunk(TypedDict, total=False):
-    index: int
-    id: str
-    type: Literal['function']
-    function: FunctionCall
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "type": self.type,
+            "function": {"name": self.name, "arguments": self.arguments},
+        }
 
 @dataclass
 class UserMessage:
@@ -59,7 +58,7 @@ class AssistantMessage:
     def to_dict(self) -> dict:
         d: dict = {"role": self.role, "content": self.content}
         if self.tool_calls:
-            d["tool_calls"] = self.tool_calls
+            d["tool_calls"] = [tc.to_dict() for tc in self.tool_calls]
         return d
 
 @dataclass

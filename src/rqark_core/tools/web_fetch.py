@@ -65,25 +65,7 @@ class WebFetch(BaseTool):
         parts.append(f'--- Raw Content ---\n{content}')
         return '\n\n'.join(parts)
 
-    def run(self, **kwargs: Any) -> str:
-        url = kwargs['url']
-        headers = {'User-Agent': self._user_agent()}
-        try:
-            with httpx.Client(proxy=self.PROXY, follow_redirects=True, timeout=30) as client:
-                resp = client.get(url, headers=headers)
-                resp.raise_for_status()
-                content_type = resp.headers.get('content-type', '')
-                if 'text/html' in content_type:
-                    content = self._clean_html(resp.text)
-                else:
-                    content = resp.text[:10000]
-        except httpx.HTTPStatusError as e:
-            return f'Fetch failed: HTTP {e.response.status_code}'
-        except httpx.RequestError as e:
-            return f'Fetch failed: {e}'
-        return self._build_response(url, content)
-
-    async def run_async(self, **kwargs: Any) -> str:
+    async def run(self, **kwargs: Any) -> str:
         url = kwargs['url']
         headers = {'User-Agent': self._user_agent()}
         try:
