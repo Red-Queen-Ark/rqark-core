@@ -10,14 +10,10 @@ async def main() -> None:
         UserMessage('你好')
     ]
     core = AgentCore(provider)
-    
     @core.on_event()
     async def print_chunk(chunk: Chunk):
         print(chunk)
-
     new_messgaes = await core.chat(messgaes)
-    for nm in new_messgaes:
-        print(nm)
 
 if __name__ == "__main__":
     asyncio.run(main())
