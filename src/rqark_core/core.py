@@ -31,6 +31,9 @@ class AgentCore:
         prompts: Sequence[BasePrompt] = [], 
         tools: Sequence[BaseTool] = [],
     ) -> tuple[str | None, Sequence[Message]]:
+        for tool in tools:
+            if getattr(tool, 'parent_core', None) is None:
+                tool.parent_core = self
         client = self._get_client(provider)
         tool_map = self._get_tool_map(tools)
         tool_prompts = self._get_tool_prompts(tools)

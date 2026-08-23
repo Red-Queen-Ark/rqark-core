@@ -1,5 +1,4 @@
 from typing import Any, cast
-from rqark_core.core import AgentCore
 from rqark_core.types.tool import BaseTool, PlanItem, PlanStatus
 
 _PLAN_UPDATE_SCHEMA = {
@@ -42,8 +41,7 @@ You have access to a `plan_update` tool for tracking explicitly requested work. 
 """
 
 class PlanUpdate(BaseTool):
-    def __init__(self, core: AgentCore):
-        self.parent_core = core
+    def __init__(self):
         self.plan_items: list[PlanItem] = []
         self.valid_statuses: tuple[PlanStatus, ...] = ('pending', 'in_progress', 'completed', 'cancelled')
 
@@ -65,6 +63,7 @@ class PlanUpdate(BaseTool):
     async def run(self, **kwargs: Any) -> str:
         plan_items, result = self._build_items(kwargs.get('items'))
         self.plan_items = plan_items
+        assert self.parent_core is not None
         await self.parent_core._emit_plan(self.plan_items)
         return result
 

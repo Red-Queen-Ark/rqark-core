@@ -21,8 +21,7 @@ You can also use multiple subagents in parallel when handling independent resear
 """
 
 class SubAgent(BaseTool):
-    def __init__(self, core: AgentCore, provider: Provider, prompts: Sequence[BasePrompt], tools: Sequence[BaseTool]):
-        self.parent_core = core
+    def __init__(self, provider: Provider, prompts: Sequence[BasePrompt], tools: Sequence[BaseTool]):
         self.provider = provider
         self.prompts = prompts
         self.tools = tools
@@ -61,14 +60,16 @@ class SubAgent(BaseTool):
         if prompt is None:
             raise TypeError('prompt is required')
         core = AgentCore()
+        parent = self.parent_core
+        assert parent is not None
 
         @core.on_chunk()
         async def forward_chunk(chunk: Chunk):
-            await self.parent_core._emit_subagent_chunk(id, chunk)
+            await parent._emit_subagent_chunk(id, chunk)
 
         @core.on_message()
         async def forward_message(message: Message):
-            await self.parent_core._emit_subagent_message(id, message)
+            await parent._emit_subagent_message(id, message)
 
         messgaes = [ UserMessage(prompt) ]
         error, new_messgaes = await core.chat(provider=self.provider, messages=messgaes, prompts=self.prompts, tools=self.tools)

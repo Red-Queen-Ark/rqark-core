@@ -1,8 +1,13 @@
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
+if TYPE_CHECKING:
+    from rqark_core.core import AgentCore
+
 class BaseTool(ABC):
+    parent_core: 'AgentCore | None' = None
+
     @property
     @abstractmethod
     def name(self) -> str: ...
