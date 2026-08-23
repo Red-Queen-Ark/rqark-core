@@ -1,5 +1,6 @@
-from typing import Any
+from typing import Any, Literal
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 
 class BaseTool(ABC):
     @property
@@ -19,3 +20,16 @@ class BaseTool(ABC):
 
     @abstractmethod
     async def run(self, **kwargs: Any) -> str: ...
+
+type PlanStatus = Literal['pending', 'in_progress', 'completed', 'cancelled']
+ICONS_MAP: dict[PlanStatus, str] = {'pending': ' ', 'in_progress': '>', 'completed': 'x', 'cancelled': '-'}
+
+@dataclass
+class PlanItem:
+    id: str
+    content: str
+    status: PlanStatus
+
+    @property
+    def icon(self):
+        return ICONS_MAP.get(self.status, ' ')

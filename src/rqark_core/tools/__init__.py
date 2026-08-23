@@ -7,6 +7,7 @@ from .web_fetch import WebFetch
 from .web_search import WebSearch
 from .write_file import WriteFile
 from .subagent import SubAgent
+from .plan_update import PlanUpdate
 
 __all__ = [
     'EditFile',
@@ -18,4 +19,5 @@ __all__ = [
     'WebSearch',
     'WriteFile',
     'SubAgent',
+    'PlanUpdate'
 ]

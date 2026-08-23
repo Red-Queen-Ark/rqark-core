@@ -1,5 +1,6 @@
 import asyncio
 import json
+import re
 import traceback
 from collections.abc import Awaitable, Callable, Sequence
 from typing import Any
@@ -7,7 +8,7 @@ from typing import Any
 from openai import AsyncOpenAI
 
 from rqark_core.types.provider import Provider
-from rqark_core.types.tool import BaseTool
+from rqark_core.types.tool import BaseTool, PlanItem
 from rqark_core.types.prompt import BasePrompt
 from rqark_core.types.chat import Chunk, Message, AssistantMessage, ToolMessage, SystemMessage, ToolCall, Usage, SubAgentChunk, SubAgentMessage
 
@@ -21,6 +22,7 @@ class AgentCore:
         self._message_listeners: list[Callable[[Message], Awaitable[None]]] = []
         self._subagent_chunk_listeners: list[Callable[[SubAgentChunk], Awaitable[None]]] = []
         self._subagent_message_listeners: list[Callable[[SubAgentMessage], Awaitable[None]]] = []
+        self._plan_listeners: list[Callable[[list[PlanItem]], Awaitable[None]]] = []
 
     async def chat(
         self, 
@@ -98,6 +100,12 @@ class AgentCore:
             return f
         return decorator
 
+    def on_plan(self) -> Callable[[Callable[[list[PlanItem]], Awaitable[None]]], Callable[[list[PlanItem]], Awaitable[None]]]:
+        def decorator(f: Callable[[list[PlanItem]], Awaitable[None]]) -> Callable[[list[PlanItem]], Awaitable[None]]:
+            self._plan_listeners.append(f)
+            return f
+        return decorator
+
     async def _emit_chuck(self, chunk: Chunk) -> None:
         for fn in self._listeners:
             try:
@@ -125,6 +133,13 @@ class AgentCore:
         for fn in self._subagent_message_listeners:
             try:
                 await fn(event)
+            except Exception:
+                traceback.print_exc()
+
+    async def _emit_plan(self, items: list[PlanItem]) -> None:
+        for fn in self._plan_listeners:
+            try:
+                await fn(items)
             except Exception:
                 traceback.print_exc()
 
@@ -232,14 +247,38 @@ class AgentCore:
     def _to_tool_call(self, data: dict[str, Any]) -> ToolCall:
         return ToolCall(data["id"], data["type"], data["function"]["name"], data["function"]["arguments"])
 
+    def _parse_args(self, args: str | None) -> dict[str, Any] | None:
+        if not args:
+            return {}
+        raw = args.strip()
+        if raw.startswith('```'):
+            lines = raw.splitlines()
+            if lines and lines[0].lstrip().startswith('```'):
+                lines = lines[1:]
+            if lines and lines[-1].strip() == '```':
+                lines = lines[:-1]
+            raw = '\n'.join(lines).strip()
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError:
+            pass
+        repaired = re.sub(r',(\s*[}\]])', r'\1', raw)
+        try:
+            return json.loads(repaired)
+        except json.JSONDecodeError:
+            return None
+
     async def _run_tool(self, tc: ToolCall, tool_map: dict[str, BaseTool]) -> ToolMessage:
         name = tc.name
         args = tc.arguments
         tool = tool_map.get(name)
         if not tool:
             return ToolMessage(tc.id, f"Error: tool '{name}' not found", name, args)
+        kwargs = self._parse_args(args)
+        if kwargs is None:
+            return ToolMessage(tc.id, f"Error: tool '{name}' received invalid JSON arguments", name, args)
         try:
-            result = await asyncio.wait_for(tool.run(**(json.loads(args) if args else {})), timeout=self.tool_timeout)
+            result = await asyncio.wait_for(tool.run(**kwargs), timeout=self.tool_timeout)
         except asyncio.TimeoutError:
             result = f"Error: tool '{name}' timed out after {self.tool_timeout}s"
         except Exception as e:
