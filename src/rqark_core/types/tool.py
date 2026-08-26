@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from contextvars import ContextVar
+from contextvars import ContextVar, Token
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -8,8 +8,11 @@ if TYPE_CHECKING:
 
 _parent_core: ContextVar['AgentCore | None'] = ContextVar('parent_core', default=None)
 
-def set_parent_core(core: 'AgentCore') -> None:
-    _parent_core.set(core)
+def set_parent_core(core: 'AgentCore') -> Token['AgentCore | None']:
+    return _parent_core.set(core)
+
+def reset_parent_core(token: Token['AgentCore | None']) -> None:
+    _parent_core.reset(token)
 
 class BaseTool(ABC):
     @property

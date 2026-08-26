@@ -10,7 +10,7 @@ from rqark_core._core.stream import ChunkHandler
 from rqark_core.types.chat import AssistantMessage, Chunk, Message, SystemMessage, ToolCall, ToolMessage
 from rqark_core.types.prompt import BasePrompt
 from rqark_core.types.provider import Provider
-from rqark_core.types.tool import BaseTool, set_parent_core
+from rqark_core.types.tool import BaseTool, reset_parent_core, set_parent_core
 
 
 class AgentCore(AgentCoreEventEmitter):
@@ -86,7 +86,19 @@ class AgentCore(AgentCoreEventEmitter):
         prompts: Sequence[BasePrompt] = [],
         tools: Sequence[BaseTool] = [],
     ) -> tuple[str | None, Sequence[Message]]:
-        set_parent_core(self)
+        token = set_parent_core(self)
+        try:
+            return await self._chat_loop(provider, messages, prompts, tools)
+        finally:
+            reset_parent_core(token)
+
+    async def _chat_loop(
+        self,
+        provider: Provider,
+        messages: Sequence[Message],
+        prompts: Sequence[BasePrompt],
+        tools: Sequence[BaseTool],
+    ) -> tuple[str | None, Sequence[Message]]:
         client = self._get_client(provider)
         tool_map = self._get_tool_map(tools)
         tool_prompts = self._get_tool_prompts(tools)
