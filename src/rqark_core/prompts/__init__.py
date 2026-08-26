@@ -1,9 +1,9 @@
-from .datetime import DateTimePrompt
 from .agents_md import AgentsMdPrompt
-from .role import RolePrompt
 from .character import CharacterPrompt
+from .datetime import DateTimePrompt
 from .git_project import GitProjectPrompt
 from .platform import PlatformPrompt
+from .role import RolePrompt
 
 __all__ = [
     "DateTimePrompt",

@@ -1,6 +1,6 @@
-from typing import TYPE_CHECKING, Any, Literal
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
     from rqark_core.core import AgentCore

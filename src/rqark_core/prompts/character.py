@@ -1,5 +1,6 @@
 from rqark_core.types.prompt import BasePrompt
 
+
 class CharacterPrompt(BasePrompt):
     priority = 15
 

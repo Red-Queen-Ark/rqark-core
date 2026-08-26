@@ -2,9 +2,11 @@ import platform
 import re
 from html import unescape
 from typing import Any
+
 import httpx
-from rqark_core.types.tool import BaseTool
+
 from rqark_core.func.epistemic import grade_source
+from rqark_core.types.tool import BaseTool
 
 
 class WebFetch(BaseTool):

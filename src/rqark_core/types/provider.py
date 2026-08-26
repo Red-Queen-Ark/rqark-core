@@ -1,7 +1,6 @@
+import re
 from dataclasses import dataclass
 from typing import Literal
-import re
-
 
 IS_THINK_MODEL: list[str] = ['deepseek-v4-pro', 'deepseek-v4-flash', 'kimi-k2.6', 'kimi-k3', 'grok-4.3', 'mimo-v2.5', 'qwen3', 'qwen-']
 DEFAULT_CONTEXT_WINDOW = 1_000_000
@@ -54,7 +53,7 @@ class Provider:
     frequency_penalty: float | None = None
     presence_penalty: float | None = None
     combine: bool = False
-            
+
     def __post_init__(self):
         if not self.name:
             self.name = self.model_name

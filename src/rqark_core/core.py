@@ -4,12 +4,14 @@ from collections.abc import Sequence
 from typing import Any
 
 from openai import AsyncOpenAI, AsyncStream
-from rqark_core.types.provider import Provider
-from rqark_core.types.tool import BaseTool
-from rqark_core.types.prompt import BasePrompt
-from rqark_core.types.chat import Chunk, Message, AssistantMessage, ToolMessage, SystemMessage, ToolCall
+
 from rqark_core._core.event import AgentCoreEventEmitter
 from rqark_core._core.stream import ChunkHandler
+from rqark_core.types.chat import AssistantMessage, Chunk, Message, SystemMessage, ToolCall, ToolMessage
+from rqark_core.types.prompt import BasePrompt
+from rqark_core.types.provider import Provider
+from rqark_core.types.tool import BaseTool
+
 
 class AgentCore(AgentCoreEventEmitter):
     def __init__(self):
@@ -20,10 +22,10 @@ class AgentCore(AgentCoreEventEmitter):
         self.provider_retry_delay = 1
 
     async def chat(
-        self, 
-        provider: Provider, 
-        messages: Sequence[Message], 
-        prompts: Sequence[BasePrompt] = [], 
+        self,
+        provider: Provider,
+        messages: Sequence[Message],
+        prompts: Sequence[BasePrompt] = [],
         tools: Sequence[BaseTool] = [],
     ) -> tuple[str | None, Sequence[Message]]:
         for tool in tools:
@@ -95,7 +97,7 @@ class AgentCore(AgentCoreEventEmitter):
                 p = SystemMessage(content)
                 system_prompts.append(p)
         return system_prompts
-        
+
     def _get_tool_prompts(self, tools: Sequence[BaseTool]):
         tool_prompts = []
         for tool in tools:

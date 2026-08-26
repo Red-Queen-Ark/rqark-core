@@ -3,6 +3,7 @@ from zoneinfo import ZoneInfo
 
 from rqark_core.types.prompt import BasePrompt
 
+
 class DateTimePrompt(BasePrompt):
     priority = 60
 

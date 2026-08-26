@@ -1,11 +1,12 @@
-from uuid import uuid4
-from typing import Any
 from collections.abc import Sequence
+from typing import Any
+from uuid import uuid4
+
 from rqark_core.core import AgentCore
-from rqark_core.types.tool import BaseTool
+from rqark_core.types.chat import Chunk, Message, UserMessage
 from rqark_core.types.prompt import BasePrompt
 from rqark_core.types.provider import Provider
-from rqark_core.types.chat import Chunk, Message, UserMessage
+from rqark_core.types.tool import BaseTool
 
 tool_prompt = """
 ## Subagent
@@ -33,11 +34,11 @@ class SubAgent(BaseTool):
     @property
     def display_key(self) -> str:
         return 'prompt'
-    
+
     @property
     def tool_prompt(self) -> str:
         return tool_prompt
-    
+
     def get_openai_schema(self) -> dict[str, Any]:
         return {
             'type': 'function',
@@ -53,7 +54,7 @@ class SubAgent(BaseTool):
                 },
             },
         }
-        
+
     async def run(self, **kwargs: Any) -> str:
         id = str(uuid4())
         prompt: str | None = kwargs.get('prompt')

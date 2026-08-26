@@ -1,6 +1,9 @@
 from typing import Any
+
 from openai.types.chat.chat_completion_chunk import ChatCompletionChunk, ChoiceDelta
+
 from rqark_core.types.chat import AssistantMessage, Chunk, ToolCall, Usage
+
 
 class ChunkHandler:
     def __init__(self, _emit_chunk):

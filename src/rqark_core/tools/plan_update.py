@@ -1,4 +1,5 @@
-from typing import Any, cast
+from typing import Any
+
 from rqark_core.types.tool import BaseTool, PlanItem, PlanStatus
 
 _PLAN_UPDATE_SCHEMA = {
@@ -73,7 +74,7 @@ class PlanUpdate(BaseTool):
         plan_items: list[PlanItem] = []
         for d in raw_items:
             status_raw = str(d.get('status', 'pending'))
-            status = cast(PlanStatus, status_raw) if status_raw in self.valid_statuses else 'pending'
+            status = status_raw if status_raw in self.valid_statuses else 'pending'
             plan_items.append(PlanItem(
                 id=str(d.get('id', '')),
                 content=str(d.get('content', '')),
