@@ -21,6 +21,64 @@ class AgentCore(AgentCoreEventEmitter):
         self.provider_retries = 3
         self.provider_retry_delay = 1
 
+    """
+    Getter
+    """
+    def _get_client(self, provider: Provider):
+        return AsyncOpenAI(
+            api_key=provider.api_key,
+            base_url=provider.api_base,
+            timeout=self.timeout,
+        )
+
+    def _get_system_prompts(self, prompts: Sequence[BasePrompt]):
+        system_prompts = []
+        _prompts = sorted(prompts, key=lambda p:p.priority)
+        for prompt in _prompts:
+            if content := prompt.get_messages():
+                p = SystemMessage(content)
+                system_prompts.append(p)
+        return system_prompts
+
+    def _get_tool_prompts(self, tools: Sequence[BaseTool]):
+        tool_prompts = []
+        for tool in tools:
+            if tool.tool_prompt:
+                prompt = SystemMessage(tool.tool_prompt)
+                tool_prompts.append(prompt)
+        return tool_prompts
+
+    def _get_tool_map(self, tools: Sequence[BaseTool]):
+        return {t.name: t for t in tools} if tools else {}
+
+    """
+    History
+    """
+    def _build_history(
+        self,
+        provider: Provider,
+        system_prompts: Sequence[Message],
+        tool_prompts: Sequence[Message],
+        messages: Sequence[Message],
+    ) -> tuple[list[Message], int]:
+        head = list(system_prompts) + list(tool_prompts)
+        if provider.combine and head:
+            head = [SystemMessage("\n".join(m.content for m in head))]
+        return head + list(messages), len(head)
+
+    def _clean_history(self, history: list[Message]) -> list[Message]:
+        while history and isinstance(history[-1], AssistantMessage) and history[-1].tool_calls:
+            history.pop()
+        return history
+    """
+    Chat Loop
+    """
+    async def _parse_stream(self, stream: AsyncStream) -> AssistantMessage:
+        handle_chunk = ChunkHandler(self._emit_chunk)
+        async for chunk in stream:
+            await handle_chunk.handle(chunk)
+        return await handle_chunk.message()
+
     async def chat(
         self,
         provider: Provider,
@@ -78,52 +136,7 @@ class AgentCore(AgentCoreEventEmitter):
                 await self._emit_message(tool_msg)
                 await self._emit_chunk(Chunk('tool_result', tool_msg))
         return None, history[system_count:]
-
-    async def _parse_stream(self, stream: AsyncStream) -> AssistantMessage:
-        handle_chunk = ChunkHandler(self._emit_chunk)
-        async for chunk in stream:
-            await handle_chunk.handle(chunk)
-        return await handle_chunk.message()
-
-    def _get_client(self, provider: Provider):
-        return AsyncOpenAI(
-            api_key=provider.api_key,
-            base_url=provider.api_base,
-            timeout=self.timeout,
-        )
-
-    def _get_system_prompts(self, prompts: Sequence[BasePrompt]):
-        system_prompts = []
-        _prompts = sorted(prompts, key=lambda p:p.priority)
-        for prompt in _prompts:
-            if content := prompt.get_messages():
-                p = SystemMessage(content)
-                system_prompts.append(p)
-        return system_prompts
-
-    def _get_tool_prompts(self, tools: Sequence[BaseTool]):
-        tool_prompts = []
-        for tool in tools:
-            if tool.tool_prompt:
-                prompt = SystemMessage(tool.tool_prompt)
-                tool_prompts.append(prompt)
-        return tool_prompts
-
-    def _build_history(
-        self,
-        provider: Provider,
-        system_prompts: Sequence[Message],
-        tool_prompts: Sequence[Message],
-        messages: Sequence[Message],
-    ) -> tuple[list[Message], int]:
-        head = list(system_prompts) + list(tool_prompts)
-        if provider.combine and head:
-            head = [SystemMessage("\n".join(m.content for m in head))]
-        return head + list(messages), len(head)
-
-    def _get_tool_map(self, tools: Sequence[BaseTool]):
-        return {t.name: t for t in tools} if tools else {}
-
+    
     async def _fail(
         self,
         err: str,
@@ -137,11 +150,9 @@ class AgentCore(AgentCoreEventEmitter):
         self._clean_history(history)
         return err, history[system_count:]
 
-    def _clean_history(self, history: list[Message]) -> list[Message]:
-        while history and isinstance(history[-1], AssistantMessage) and history[-1].tool_calls:
-            history.pop()
-        return history
-
+    """
+    Tool
+    """
     def _parse_tool_args(self, args: str | None) -> dict[str, Any] | None:
         if not args:
             return {}
