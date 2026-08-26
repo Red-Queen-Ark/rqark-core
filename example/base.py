@@ -3,7 +3,8 @@ from rqark_core.core import AgentCore
 from rqark_core.types.provider import Provider
 from rqark_core.types.chat import UserMessage, ToolMessage, Chunk, Message
 
-provider = Provider('inhouse', 'api_key', 'http://127.0.0.1:8080', 0, combine=True)
+from model import MODEL_NAME
+provider = Provider(MODEL_NAME, 'api_key', 'http://127.0.0.1:8080', 0, combine=True)
 core = AgentCore()
 
 last_chunk_type = Chunk('reasoning_content', '')

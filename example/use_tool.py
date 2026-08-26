@@ -5,7 +5,8 @@ from rqark_core.types.chat import UserMessage, ToolMessage, Chunk, Message
 from rqark_core.prompts import DateTimePrompt, RolePrompt, PlatformPrompt
 from rqark_core.tools import WebSearch, WebFetch
 
-provider = Provider('inhouse', 'api_key', 'http://127.0.0.1:8080', 0, combine=True)
+from model import MODEL_NAME
+provider = Provider(MODEL_NAME, 'api_key', 'http://127.0.0.1:8080', 0, combine=True)
 
 prompts = [
     DateTimePrompt(),

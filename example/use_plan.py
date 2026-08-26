@@ -5,8 +5,8 @@ from rqark_core.types.provider import Provider
 from rqark_core.types.tool import PlanItem
 from rqark_core.tools import PlanUpdate
 
-
-provider = Provider('inhouse', 'api_key', 'http://127.0.0.1:8080', 0, combine=True)
+from model import MODEL_NAME
+provider = Provider(MODEL_NAME, 'api_key', 'http://127.0.0.1:8080', 0, combine=True)
 core = AgentCore()
 
 tools = [ PlanUpdate() ]
