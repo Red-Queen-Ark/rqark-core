@@ -106,7 +106,7 @@ async def main():
 asyncio.run(main())
 ```
 
-`chat(provider, messages, prompts, tools)` 回傳 `(error, history)`：成功時 `error` 係 `None`，`history` 係完整對話記錄（包括工具往返）；失敗時 `error` 係錯誤訊息。
+`chat(provider, messages, prompts, tools)` 回傳 `(error, history)`：成功時 `error` 係 `None`，`history` 係完整對話記錄（包括工具往返）；失敗時 `error` 係 `Exception` 物件。
 
 `AgentCore` 事件：
 
@@ -118,4 +118,4 @@ asyncio.run(main())
 | `on_subagent_message` | `SubAgentMessage`（`id` + `Message`） |
 | `on_plan` | `list[PlanItem]` |
 
-`Provider` 支援 `reasoning_effort`、`thinking`、`temperature`、`top_p`、`seed`、`frequency_penalty`、`presence_penalty`，同埋 `combine`（將 system + tool prompts 合併做一個 `SystemMessage`）。
+`Provider` 有 `reasoning_effort`、`thinking`、`temperature`、`top_p`、`seed`、`frequency_penalty`、`presence_penalty` 等欄位（目前未接入 API 請求），同埋 `combine`（將 system + tool prompts 合併做一個 `SystemMessage`）。
