@@ -91,8 +91,7 @@ core = AgentCore()
 
 prompts = [RolePrompt(), DateTimePrompt(), PlatformPrompt()]
 tools = [WebSearch(), WebFetch(), ReadFile(), WriteFile()]
-tools.append(SubAgent(provider, prompts, tools))
-tools.append(PlanUpdate())
+tools = tools + [SubAgent(provider, prompts, tools), PlanUpdate()]
 
 
 @core.on_chunk()

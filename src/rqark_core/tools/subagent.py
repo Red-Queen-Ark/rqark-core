@@ -71,8 +71,8 @@ class SubAgent(BaseTool):
         async def forward_message(message: Message):
             await parent._emit_subagent_message(id, message)
 
-        messgaes = [ UserMessage(prompt) ]
-        error, new_messgaes = await core.chat(provider=self.provider, messages=messgaes, prompts=self.prompts, tools=self.tools)
+        messages = [ UserMessage(prompt) ]
+        error, new_messages = await core.chat(provider=self.provider, messages=messages, prompts=self.prompts, tools=self.tools)
         if error:
             return error
-        return new_messgaes[-1].content
+        return new_messages[-1].content

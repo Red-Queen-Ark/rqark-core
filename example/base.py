@@ -30,8 +30,8 @@ async def print_message(message: Message):
     print(f'[message] {type(message).__name__}')
 
 async def main() -> None:
-    messgaes = [ UserMessage('你好') ]
-    error, new_messgaes = await core.chat(provider=provider, messages=messgaes)
+    messages = [ UserMessage('你好') ]
+    error, new_messages = await core.chat(provider=provider, messages=messages)
 
 if __name__ == "__main__":
     asyncio.run(main())
