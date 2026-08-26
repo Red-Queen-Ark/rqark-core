@@ -46,6 +46,7 @@ class AgentCore(AgentCoreEventEmitter):
             if tools:
                 params["tools"] = [t.get_openai_schema() for t in tools]
             last_err: Exception | None = None
+            resp = None
             attempts = 0
             for attempt in range(self.provider_retries):
                 attempts = attempt + 1
@@ -59,6 +60,8 @@ class AgentCore(AgentCoreEventEmitter):
                         await asyncio.sleep(self.provider_retry_delay)
             if last_err is not None:
                 return await self._fail(str(last_err), history, system_count, 'request', attempts, provider.model_name)
+            if resp is None:
+                return await self._fail('no provider attempt made', history, system_count, 'request', attempts, provider.model_name)
             try:
                 msg = await self._parse_stream(resp)
             except Exception as e:

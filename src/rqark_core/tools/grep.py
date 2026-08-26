@@ -57,7 +57,7 @@ class Grep(BaseTool):
         if root.is_file():
             matches = self._search_file(root, regex)
         else:
-            matches: list[str] = []
+            matches = []
             self._walk_and_search(root, include or '*', regex, matches)
         if not matches:
             return f'No matches for: {pattern}'
