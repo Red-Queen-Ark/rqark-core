@@ -1,6 +1,5 @@
 import asyncio
 import json
-import re
 import traceback
 from collections.abc import Awaitable, Callable, Sequence
 from typing import Any
@@ -250,24 +249,11 @@ class AgentCore:
     def _to_tool_call(self, data: dict[str, Any]) -> ToolCall:
         return ToolCall(data["id"], data["type"], data["function"]["name"], data["function"]["arguments"])
 
-    def _parse_args(self, args: str | None) -> dict[str, Any] | None:
+    def _parse_tool_args(self, args: str | None) -> dict[str, Any] | None:
         if not args:
             return {}
-        raw = args.strip()
-        if raw.startswith('```'):
-            lines = raw.splitlines()
-            if lines and lines[0].lstrip().startswith('```'):
-                lines = lines[1:]
-            if lines and lines[-1].strip() == '```':
-                lines = lines[:-1]
-            raw = '\n'.join(lines).strip()
         try:
-            return json.loads(raw)
-        except json.JSONDecodeError:
-            pass
-        repaired = re.sub(r',(\s*[}\]])', r'\1', raw)
-        try:
-            return json.loads(repaired)
+            return json.loads(args)
         except json.JSONDecodeError:
             return None
 
@@ -277,7 +263,7 @@ class AgentCore:
         tool = tool_map.get(name)
         if not tool:
             return ToolMessage(tc.id, f"Error: tool '{name}' not found", name, args)
-        kwargs = self._parse_args(args)
+        kwargs = self._parse_tool_args(args)
         if kwargs is None:
             return ToolMessage(tc.id, f"Error: tool '{name}' received invalid JSON arguments", name, args)
         try:
