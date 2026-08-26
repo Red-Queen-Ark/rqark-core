@@ -25,30 +25,30 @@ core = AgentCore()
 
 last_chunk_type = Chunk('reasoning_content', '')
 
-@core.on_chunk()
-async def print_chunk(chunk: Chunk):
-    global last_chunk_type
-    if last_chunk_type.type != chunk.type:
-        print()
-    if chunk.type == 'reasoning_content':
-        print(chunk.content, flush=True, end='')
-    elif chunk.type == 'content':
-        print(chunk.content, flush=True, end='')
-    elif chunk.type == 'tool_calls' and isinstance(chunk.content, list):
-        for call in chunk.content:
-            print(call.name, call.arguments)
-    elif chunk.type == 'tool_result' and isinstance(chunk.content, ToolMessage):
-        print(chunk.content.tool_name, chunk.content.content)
-    elif chunk.type == 'error':
-        print(f'[error] {chunk.content}')
-    last_chunk_type = chunk
+# @core.on_chunk()
+# async def print_chunk(chunk: Chunk):
+#     global last_chunk_type
+#     if last_chunk_type.type != chunk.type:
+#         print()
+#     if chunk.type == 'reasoning_content':
+#         print(chunk.content, flush=True, end='')
+#     elif chunk.type == 'content':
+#         print(chunk.content, flush=True, end='')
+#     elif chunk.type == 'tool_calls' and isinstance(chunk.content, list):
+#         for call in chunk.content:
+#             print(call.name, call.arguments)
+#     elif chunk.type == 'tool_result' and isinstance(chunk.content, ToolMessage):
+#         print(chunk.content.tool_name, chunk.content.content)
+#     elif chunk.type == 'error':
+#         print(f'[error] {chunk.content}')
+#     last_chunk_type = chunk
 
 @core.on_message()
 async def print_message(message: Message):
     print(f'[message] {type(message).__name__} {message.content}')
 
 async def main() -> None:
-    messages = [ UserMessage('今日香港天氣') ]
+    messages = [ UserMessage('今日香港温度') ]
     error, new_messages = await core.chat(provider=provider, messages=messages, prompts=prompts, tools=tools)
 
 if __name__ == "__main__":
