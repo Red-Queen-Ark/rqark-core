@@ -1,12 +1,20 @@
 from abc import ABC, abstractmethod
+from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
     from rqark_core.core import AgentCore
 
+_parent_core: ContextVar['AgentCore | None'] = ContextVar('parent_core', default=None)
+
+def set_parent_core(core: 'AgentCore') -> None:
+    _parent_core.set(core)
+
 class BaseTool(ABC):
-    parent_core: 'AgentCore | None' = None
+    @property
+    def parent_core(self) -> 'AgentCore | None':
+        return _parent_core.get()
 
     @property
     @abstractmethod
