@@ -99,38 +99,29 @@ class AgentCore(AgentCoreEventEmitter):
     ) -> tuple[Exception | None, Sequence[Message]]:
         token = set_parent_core(self)
         try:
-            return await self._chat_loop(provider, messages, prompts, tools)
+            error: Exception | None = None
+            client = self._get_client(provider)
+            tool_map = self._get_tool_map(tools)
+            tool_prompts = self._get_tool_prompts(tools)
+            system_prompts = self._get_system_prompts(prompts)
+            history, system_count = self._build_history(provider, system_prompts, tool_prompts, messages)
+            while True:
+                params = await self._build_chat_params(provider, history, tools)
+                try:
+                    resp: AsyncStream = await client.chat.completions.create(**params)
+                    msg = await self._parse_stream(resp)
+                    history.append(msg)
+                    await self._emit_message(msg)
+                    if not msg.tool_calls:
+                        break
+                    await self._use_tools(msg, tool_map, history)
+                except Exception as e:
+                    await self._emit_chunk(Chunk('error', str(error := e)))
+                    self._clean_history(history)
+                    break
+            return error, history[system_count:]
         finally:
             reset_parent_core(token)
-
-    async def _chat_loop(
-        self,
-        provider: Provider,
-        messages: Sequence[Message],
-        prompts: Sequence[BasePrompt],
-        tools: Sequence[BaseTool],
-    ) -> tuple[Exception | None, Sequence[Message]]:
-        error: Exception | None = None
-        client = self._get_client(provider)
-        tool_map = self._get_tool_map(tools)
-        tool_prompts = self._get_tool_prompts(tools)
-        system_prompts = self._get_system_prompts(prompts)
-        history, system_count = self._build_history(provider, system_prompts, tool_prompts, messages)
-        while True:
-            params = await self._build_chat_params(provider, history, tools)
-            try:
-                resp: AsyncStream = await client.chat.completions.create(**params)
-                msg = await self._parse_stream(resp)
-                history.append(msg)
-                await self._emit_message(msg)
-                if not msg.tool_calls:
-                    break
-                await self._use_tools(msg, tool_map, history)
-            except Exception as e:
-                await self._emit_chunk(Chunk('error', str(error := e)))
-                self._clean_history(history)
-                break
-        return error, history[system_count:]
 
     """
     Tool
