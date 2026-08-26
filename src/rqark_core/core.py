@@ -1,27 +1,23 @@
 import asyncio
 import json
-import traceback
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Sequence
 from typing import Any
 
 from openai import AsyncOpenAI
 
 from rqark_core.types.provider import Provider
-from rqark_core.types.tool import BaseTool, PlanItem
+from rqark_core.types.tool import BaseTool
 from rqark_core.types.prompt import BasePrompt
-from rqark_core.types.chat import Chunk, Message, AssistantMessage, ToolMessage, SystemMessage, ToolCall, Usage, SubAgentChunk, SubAgentMessage
+from rqark_core.types.chat import Chunk, Message, AssistantMessage, ToolMessage, SystemMessage, ToolCall, Usage
+from rqark_core.event import AgentCoreEventEmitter
 
-class AgentCore:
+class AgentCore(AgentCoreEventEmitter):
     def __init__(self):
+        super().__init__()
         self.timeout = 5
         self.tool_timeout = 120
         self.provider_retries = 3
         self.provider_retry_delay = 1
-        self._listeners: list[Callable[[Chunk], Awaitable[None]]] = []
-        self._message_listeners: list[Callable[[Message], Awaitable[None]]] = []
-        self._subagent_chunk_listeners: list[Callable[[SubAgentChunk], Awaitable[None]]] = []
-        self._subagent_message_listeners: list[Callable[[SubAgentMessage], Awaitable[None]]] = []
-        self._plan_listeners: list[Callable[[list[PlanItem]], Awaitable[None]]] = []
 
     async def chat(
         self, 
@@ -75,75 +71,8 @@ class AgentCore:
                     tool_msg = ToolMessage(tc.id, f"Error: {tool_msg}", tc.name, tc.arguments)
                 history.append(tool_msg)
                 await self._emit_message(tool_msg)
-                await self._emit_chuck(Chunk('tool_result', tool_msg))
+                await self._emit_chunk(Chunk('tool_result', tool_msg))
         return None, history[system_count:]
-
-    def on_chunk(self) -> Callable[[Callable[[Chunk], Awaitable[None]]], Callable[[Chunk], Awaitable[None]]]:
-        def decorator(f: Callable[[Chunk], Awaitable[None]]) -> Callable[[Chunk], Awaitable[None]]:
-            self._listeners.append(f)
-            return f
-        return decorator
-
-    def on_message(self) -> Callable[[Callable[[Message], Awaitable[None]]], Callable[[Message], Awaitable[None]]]:
-        def decorator(f: Callable[[Message], Awaitable[None]]) -> Callable[[Message], Awaitable[None]]:
-            self._message_listeners.append(f)
-            return f
-        return decorator
-
-    def on_subagent_chunk(self) -> Callable[[Callable[[SubAgentChunk], Awaitable[None]]], Callable[[SubAgentChunk], Awaitable[None]]]:
-        def decorator(f: Callable[[SubAgentChunk], Awaitable[None]]) -> Callable[[SubAgentChunk], Awaitable[None]]:
-            self._subagent_chunk_listeners.append(f)
-            return f
-        return decorator
-
-    def on_subagent_message(self) -> Callable[[Callable[[SubAgentMessage], Awaitable[None]]], Callable[[SubAgentMessage], Awaitable[None]]]:
-        def decorator(f: Callable[[SubAgentMessage], Awaitable[None]]) -> Callable[[SubAgentMessage], Awaitable[None]]:
-            self._subagent_message_listeners.append(f)
-            return f
-        return decorator
-
-    def on_plan(self) -> Callable[[Callable[[list[PlanItem]], Awaitable[None]]], Callable[[list[PlanItem]], Awaitable[None]]]:
-        def decorator(f: Callable[[list[PlanItem]], Awaitable[None]]) -> Callable[[list[PlanItem]], Awaitable[None]]:
-            self._plan_listeners.append(f)
-            return f
-        return decorator
-
-    async def _emit_chuck(self, chunk: Chunk) -> None:
-        for fn in self._listeners:
-            try:
-                await fn(chunk)
-            except Exception:
-                traceback.print_exc()
-
-    async def _emit_message(self, message: Message) -> None:
-        for fn in self._message_listeners:
-            try:
-                await fn(message)
-            except Exception:
-                traceback.print_exc()
-
-    async def _emit_subagent_chunk(self, id: str, chunk: Chunk) -> None:
-        event = SubAgentChunk(id, chunk)
-        for fn in self._subagent_chunk_listeners:
-            try:
-                await fn(event)
-            except Exception:
-                traceback.print_exc()
-
-    async def _emit_subagent_message(self, id: str, message: Message) -> None:
-        event = SubAgentMessage(id, message)
-        for fn in self._subagent_message_listeners:
-            try:
-                await fn(event)
-            except Exception:
-                traceback.print_exc()
-
-    async def _emit_plan(self, items: list[PlanItem]) -> None:
-        for fn in self._plan_listeners:
-            try:
-                await fn(items)
-            except Exception:
-                traceback.print_exc()
 
     def _get_client(self, provider: Provider):
         return AsyncOpenAI(
@@ -193,7 +122,7 @@ class AgentCore:
         attempts: int = 1,
         model_name: str = '',
     ) -> tuple[str, Sequence[Message]]:
-        await self._emit_chuck(Chunk('error', f'[stage={stage} attempts={attempts} model={model_name}] {err}'))
+        await self._emit_chunk(Chunk('error', f'[stage={stage} attempts={attempts} model={model_name}] {err}'))
         self._clean_history(history)
         return err, history[system_count:]
 
@@ -216,11 +145,11 @@ class AgentCore:
             d = chunk.choices[0].delta
             if d.content:
                 content += d.content
-                await self._emit_chuck(Chunk('content', d.content))
+                await self._emit_chunk(Chunk('content', d.content))
             rc = getattr(d, "reasoning_content", None)
             if rc:
                 reasoning += rc
-                await self._emit_chuck(Chunk('reasoning_content', rc))
+                await self._emit_chunk(Chunk('reasoning_content', rc))
             if d.tool_calls:
                 for tc in d.tool_calls:
                     if tc.index not in tc_acc:
@@ -240,9 +169,9 @@ class AgentCore:
         tool_calls: list[ToolCall] | None = None
         if tc_acc:
             tool_calls = [self._to_tool_call(tc_acc[i]) for i in sorted(tc_acc)]
-            await self._emit_chuck(Chunk('tool_calls', tool_calls))
+            await self._emit_chunk(Chunk('tool_calls', tool_calls))
         if usage:
-            await self._emit_chuck(Chunk('usage', usage))
+            await self._emit_chunk(Chunk('usage', usage))
         assistant_message = AssistantMessage( content=content, tool_calls=tool_calls, reasoning_content=reasoning or None, usage=usage)
         return assistant_message
 
