@@ -3,8 +3,8 @@ import json
 from collections.abc import Sequence
 from typing import Any
 
-from openai import AsyncOpenAI
-
+from openai import AsyncOpenAI, AsyncStream
+from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
 from rqark_core.types.provider import Provider
 from rqark_core.types.tool import BaseTool
 from rqark_core.types.prompt import BasePrompt
@@ -131,13 +131,14 @@ class AgentCore(AgentCoreEventEmitter):
             history.pop()
         return history
 
-    async def _parse_stream(self, stream: Any) -> AssistantMessage:
+    async def _parse_stream(self, stream: AsyncStream) -> AssistantMessage:
         content = ""
         reasoning = ""
         usage: Usage | None = None
         tc_acc: dict[int, dict[str, Any]] = {}
 
         async for chunk in stream:
+            chunk: ChatCompletionChunk = chunk
             if chunk.usage:
                 usage = Usage(**chunk.usage.model_dump(include={'prompt_tokens', 'completion_tokens', 'total_tokens'}))
             if not chunk.choices:
