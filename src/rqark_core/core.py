@@ -4,12 +4,12 @@ from collections.abc import Sequence
 from typing import Any
 
 from openai import AsyncOpenAI, AsyncStream
-from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
 from rqark_core.types.provider import Provider
 from rqark_core.types.tool import BaseTool
 from rqark_core.types.prompt import BasePrompt
-from rqark_core.types.chat import Chunk, Message, AssistantMessage, ToolMessage, SystemMessage, ToolCall, Usage
+from rqark_core.types.chat import Chunk, Message, AssistantMessage, ToolMessage, SystemMessage, ToolCall
 from rqark_core.event import AgentCoreEventEmitter
+from rqark_core.stream import ChunkHandler
 
 class AgentCore(AgentCoreEventEmitter):
     def __init__(self):
@@ -74,6 +74,12 @@ class AgentCore(AgentCoreEventEmitter):
                 await self._emit_chunk(Chunk('tool_result', tool_msg))
         return None, history[system_count:]
 
+    async def _parse_stream(self, stream: AsyncStream) -> AssistantMessage:
+        handle_chunk = ChunkHandler(self._emit_chunk)
+        async for chunk in stream:
+            await handle_chunk.handle(chunk)
+        return await handle_chunk.message()
+
     def _get_client(self, provider: Provider):
         return AsyncOpenAI(
             api_key=provider.api_key,
@@ -130,54 +136,6 @@ class AgentCore(AgentCoreEventEmitter):
         while history and isinstance(history[-1], AssistantMessage) and history[-1].tool_calls:
             history.pop()
         return history
-
-    async def _parse_stream(self, stream: AsyncStream) -> AssistantMessage:
-        content = ""
-        reasoning = ""
-        usage: Usage | None = None
-        tc_acc: dict[int, dict[str, Any]] = {}
-
-        async for chunk in stream:
-            chunk: ChatCompletionChunk = chunk
-            if chunk.usage:
-                usage = Usage(**chunk.usage.model_dump(include={'prompt_tokens', 'completion_tokens', 'total_tokens'}))
-            if not chunk.choices:
-                continue
-            d = chunk.choices[0].delta
-            if d.content:
-                content += d.content
-                await self._emit_chunk(Chunk('content', d.content))
-            rc = getattr(d, "reasoning_content", None)
-            if rc:
-                reasoning += rc
-                await self._emit_chunk(Chunk('reasoning_content', rc))
-            if d.tool_calls:
-                for tc in d.tool_calls:
-                    if tc.index not in tc_acc:
-                        tc_acc[tc.index] = {
-                            "id": "", "type": "function",
-                            "function": {"name": "", "arguments": ""},
-                        }
-                    acc = tc_acc[tc.index]
-                    if tc.id:
-                        acc["id"] = tc.id
-                    if tc.function:
-                        if tc.function.name:
-                            acc["function"]["name"] = tc.function.name
-                        if tc.function.arguments:
-                            acc["function"]["arguments"] += tc.function.arguments
-
-        tool_calls: list[ToolCall] | None = None
-        if tc_acc:
-            tool_calls = [self._to_tool_call(tc_acc[i]) for i in sorted(tc_acc)]
-            await self._emit_chunk(Chunk('tool_calls', tool_calls))
-        if usage:
-            await self._emit_chunk(Chunk('usage', usage))
-        assistant_message = AssistantMessage( content=content, tool_calls=tool_calls, reasoning_content=reasoning or None, usage=usage)
-        return assistant_message
-
-    def _to_tool_call(self, data: dict[str, Any]) -> ToolCall:
-        return ToolCall(data["id"], data["type"], data["function"]["name"], data["function"]["arguments"])
 
     def _parse_tool_args(self, args: str | None) -> dict[str, Any] | None:
         if not args:
