@@ -18,8 +18,6 @@ class AgentCore(AgentCoreEventEmitter):
         super().__init__()
         self.timeout = 5
         self.tool_timeout = 120
-        self.provider_retries = 3
-        self.provider_retry_delay = 1
 
     """
     Getter
@@ -70,9 +68,21 @@ class AgentCore(AgentCoreEventEmitter):
         while history and isinstance(history[-1], AssistantMessage) and history[-1].tool_calls:
             history.pop()
         return history
+
     """
     Chat Loop
     """
+    async def _build_chat_params(self, provider: Provider, history: list[Message], tools: Sequence[BaseTool]):
+        params: dict[str, Any] = {
+            "model": provider.model_name,
+            "messages": [ m.to_dict() for m in history ],
+            "stream": True,
+            "stream_options": {"include_usage": True},
+        }
+        if tools:
+            params["tools"] = [t.get_openai_schema() for t in tools]
+        return params
+
     async def _parse_stream(self, stream: AsyncStream) -> AssistantMessage:
         handle_chunk = ChunkHandler(self._emit_chunk)
         async for chunk in stream:
@@ -105,55 +115,20 @@ class AgentCore(AgentCoreEventEmitter):
         system_prompts = self._get_system_prompts(prompts)
         history, system_count = self._build_history(provider, system_prompts, tool_prompts, messages)
         while True:
-            params: dict[str, Any] = {
-                "model": provider.model_name,
-                "messages": [ m.to_dict() for m in history ],
-                "stream": True,
-                "stream_options": {"include_usage": True},
-            }
-            if tools:
-                params["tools"] = [t.get_openai_schema() for t in tools]
-            last_err: Exception | None = None
-            resp = None
-            for attempt in range(self.provider_retries):
-                try:
-                    resp = await client.chat.completions.create(**params)
-                    last_err = None
-                    break
-                except Exception as e:
-                    last_err = e
-                    if attempt < self.provider_retries - 1:
-                        await asyncio.sleep(self.provider_retry_delay)
-            if last_err is not None:
-                return await self._fail(last_err, history, system_count)
-            if resp is None:
-                return await self._fail(RuntimeError('no provider attempt made'), history, system_count)
+            params = await self._build_chat_params(provider, history, tools)
             try:
+                resp: AsyncStream = await client.chat.completions.create(**params)
                 msg = await self._parse_stream(resp)
             except Exception as e:
-                return await self._fail(e, history, system_count)
+                await self._emit_chunk(Chunk('error', str(e)))
+                self._clean_history(history)
+                return e, history[system_count:]
             history.append(msg)
             await self._emit_message(msg)
             if not msg.tool_calls:
                 break
-            tool_msgs = await asyncio.gather(*[self._run_tool(tc, tool_map) for tc in msg.tool_calls], return_exceptions=True)
-            for tc, tool_msg in zip(msg.tool_calls, tool_msgs):
-                if isinstance(tool_msg, BaseException):
-                    tool_msg = ToolMessage(tc.id, f"Error: {tool_msg}", tc.name, tc.arguments)
-                history.append(tool_msg)
-                await self._emit_message(tool_msg)
-                await self._emit_chunk(Chunk('tool_result', tool_msg))
+            await self._use_tools(msg, tool_map, history)
         return None, history[system_count:]
-
-    async def _fail(
-        self,
-        err: Exception,
-        history: list[Message],
-        system_count: int,
-    ) -> tuple[Exception, Sequence[Message]]:
-        await self._emit_chunk(Chunk('error', str(err)))
-        self._clean_history(history)
-        return err, history[system_count:]
 
     """
     Tool
@@ -165,6 +140,22 @@ class AgentCore(AgentCoreEventEmitter):
             return json.loads(args)
         except json.JSONDecodeError:
             return None
+
+    async def _use_tools(
+        self,
+        msg: AssistantMessage,
+        tool_map: dict[str, BaseTool],
+        history: list[Message],
+    ):
+        if not msg.tool_calls:
+            return
+        tool_msgs = await asyncio.gather(*[self._run_tool(tc, tool_map) for tc in msg.tool_calls], return_exceptions=True)
+        for tc, tool_msg in zip(msg.tool_calls, tool_msgs):
+            if isinstance(tool_msg, BaseException):
+                tool_msg = ToolMessage(tc.id, f"Error: {tool_msg}", tc.name, tc.arguments)
+            history.append(tool_msg)
+            await self._emit_message(tool_msg)
+            await self._emit_chunk(Chunk('tool_result', tool_msg))
 
     async def _run_tool(self, tc: ToolCall, tool_map: dict[str, BaseTool]) -> ToolMessage:
         name = tc.name
