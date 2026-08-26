@@ -115,9 +115,7 @@ class AgentCore(AgentCoreEventEmitter):
                 params["tools"] = [t.get_openai_schema() for t in tools]
             last_err: Exception | None = None
             resp = None
-            attempts = 0
             for attempt in range(self.provider_retries):
-                attempts = attempt + 1
                 try:
                     resp = await client.chat.completions.create(**params)
                     last_err = None
@@ -127,13 +125,13 @@ class AgentCore(AgentCoreEventEmitter):
                     if attempt < self.provider_retries - 1:
                         await asyncio.sleep(self.provider_retry_delay)
             if last_err is not None:
-                return await self._fail(last_err, history, system_count, 'request', attempts, provider.model_name)
+                return await self._fail(last_err, history, system_count)
             if resp is None:
-                return await self._fail(RuntimeError('no provider attempt made'), history, system_count, 'request', attempts, provider.model_name)
+                return await self._fail(RuntimeError('no provider attempt made'), history, system_count)
             try:
                 msg = await self._parse_stream(resp)
             except Exception as e:
-                return await self._fail(e, history, system_count, 'stream', attempts, provider.model_name)
+                return await self._fail(e, history, system_count)
             history.append(msg)
             await self._emit_message(msg)
             if not msg.tool_calls:
@@ -152,11 +150,8 @@ class AgentCore(AgentCoreEventEmitter):
         err: Exception,
         history: list[Message],
         system_count: int,
-        stage: str = 'request',
-        attempts: int = 1,
-        model_name: str = '',
     ) -> tuple[Exception, Sequence[Message]]:
-        await self._emit_chunk(Chunk('error', f'[stage={stage} attempts={attempts} model={model_name}] {err}'))
+        await self._emit_chunk(Chunk('error', str(err)))
         self._clean_history(history)
         return err, history[system_count:]
 
