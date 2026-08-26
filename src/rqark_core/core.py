@@ -85,7 +85,7 @@ class AgentCore(AgentCoreEventEmitter):
         messages: Sequence[Message],
         prompts: Sequence[BasePrompt] = [],
         tools: Sequence[BaseTool] = [],
-    ) -> tuple[str | None, Sequence[Message]]:
+    ) -> tuple[Exception | None, Sequence[Message]]:
         token = set_parent_core(self)
         try:
             return await self._chat_loop(provider, messages, prompts, tools)
@@ -98,7 +98,7 @@ class AgentCore(AgentCoreEventEmitter):
         messages: Sequence[Message],
         prompts: Sequence[BasePrompt],
         tools: Sequence[BaseTool],
-    ) -> tuple[str | None, Sequence[Message]]:
+    ) -> tuple[Exception | None, Sequence[Message]]:
         client = self._get_client(provider)
         tool_map = self._get_tool_map(tools)
         tool_prompts = self._get_tool_prompts(tools)
@@ -127,13 +127,13 @@ class AgentCore(AgentCoreEventEmitter):
                     if attempt < self.provider_retries - 1:
                         await asyncio.sleep(self.provider_retry_delay)
             if last_err is not None:
-                return await self._fail(str(last_err), history, system_count, 'request', attempts, provider.model_name)
+                return await self._fail(last_err, history, system_count, 'request', attempts, provider.model_name)
             if resp is None:
-                return await self._fail('no provider attempt made', history, system_count, 'request', attempts, provider.model_name)
+                return await self._fail(RuntimeError('no provider attempt made'), history, system_count, 'request', attempts, provider.model_name)
             try:
                 msg = await self._parse_stream(resp)
             except Exception as e:
-                return await self._fail(str(e), history, system_count, 'stream', attempts, provider.model_name)
+                return await self._fail(e, history, system_count, 'stream', attempts, provider.model_name)
             history.append(msg)
             await self._emit_message(msg)
             if not msg.tool_calls:
@@ -149,13 +149,13 @@ class AgentCore(AgentCoreEventEmitter):
 
     async def _fail(
         self,
-        err: str,
+        err: Exception,
         history: list[Message],
         system_count: int,
         stage: str = 'request',
         attempts: int = 1,
         model_name: str = '',
-    ) -> tuple[str, Sequence[Message]]:
+    ) -> tuple[Exception, Sequence[Message]]:
         await self._emit_chunk(Chunk('error', f'[stage={stage} attempts={attempts} model={model_name}] {err}'))
         self._clean_history(history)
         return err, history[system_count:]
