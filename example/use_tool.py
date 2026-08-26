@@ -45,10 +45,10 @@ async def print_chunk(chunk: Chunk):
 
 @core.on_message()
 async def print_message(message: Message):
-    print(f'[message] {type(message).__name__}')
+    print(f'[message] {type(message).__name__} {message.content}')
 
 async def main() -> None:
-    messages = [ UserMessage('今日天氣') ]
+    messages = [ UserMessage('今日香港天氣') ]
     error, new_messages = await core.chat(provider=provider, messages=messages, prompts=prompts, tools=tools)
 
 if __name__ == "__main__":
