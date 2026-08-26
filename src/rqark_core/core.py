@@ -109,6 +109,7 @@ class AgentCore(AgentCoreEventEmitter):
         prompts: Sequence[BasePrompt],
         tools: Sequence[BaseTool],
     ) -> tuple[Exception | None, Sequence[Message]]:
+        error: Exception | None = None
         client = self._get_client(provider)
         tool_map = self._get_tool_map(tools)
         tool_prompts = self._get_tool_prompts(tools)
@@ -119,16 +120,16 @@ class AgentCore(AgentCoreEventEmitter):
             try:
                 resp: AsyncStream = await client.chat.completions.create(**params)
                 msg = await self._parse_stream(resp)
+                history.append(msg)
+                await self._emit_message(msg)
+                if not msg.tool_calls:
+                    break
+                await self._use_tools(msg, tool_map, history)
             except Exception as e:
-                await self._emit_chunk(Chunk('error', str(e)))
+                await self._emit_chunk(Chunk('error', str(error := e)))
                 self._clean_history(history)
-                return e, history[system_count:]
-            history.append(msg)
-            await self._emit_message(msg)
-            if not msg.tool_calls:
                 break
-            await self._use_tools(msg, tool_map, history)
-        return None, history[system_count:]
+        return error, history[system_count:]
 
     """
     Tool
