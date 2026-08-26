@@ -8,8 +8,8 @@ from rqark_core.types.provider import Provider
 from rqark_core.types.tool import BaseTool
 from rqark_core.types.prompt import BasePrompt
 from rqark_core.types.chat import Chunk, Message, AssistantMessage, ToolMessage, SystemMessage, ToolCall
-from rqark_core.event import AgentCoreEventEmitter
-from rqark_core.stream import ChunkHandler
+from rqark_core._core.event import AgentCoreEventEmitter
+from rqark_core._core.stream import ChunkHandler
 
 class AgentCore(AgentCoreEventEmitter):
     def __init__(self):
