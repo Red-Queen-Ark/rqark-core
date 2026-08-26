@@ -6,7 +6,7 @@ from rqark_core.types.chat import Chunk, Message, SubAgentChunk, SubAgentMessage
 
 T = TypeVar("T")
 
-class AgentCoreEvent:
+class AgentCoreEventEmitter:
     def __init__(self):
         self._listeners: list[Callable[[Chunk], Awaitable[None]]] = []
         self._message_listeners: list[Callable[[Message], Awaitable[None]]] = []
