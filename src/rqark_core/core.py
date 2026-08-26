@@ -10,7 +10,7 @@ from rqark_core._core.stream import ChunkHandler
 from rqark_core.types.chat import AssistantMessage, Chunk, Message, SystemMessage, ToolCall, ToolMessage
 from rqark_core.types.prompt import BasePrompt
 from rqark_core.types.provider import Provider
-from rqark_core.types.tool import BaseTool, reset_parent_core, set_parent_core
+from rqark_core.types.tool import BaseTool, PlanItem, reset_parent_core, set_parent_core
 
 
 class AgentCore(AgentCoreEventEmitter):
@@ -18,6 +18,7 @@ class AgentCore(AgentCoreEventEmitter):
         super().__init__()
         self.timeout = 5
         self.tool_timeout = 120
+        self.plan_items: list[PlanItem] = []
 
     """
     Getter

@@ -43,7 +43,6 @@ You have access to a `plan_update` tool for tracking explicitly requested work. 
 
 class PlanUpdate(BaseTool):
     def __init__(self):
-        self.plan_items: list[PlanItem] = []
         self.valid_statuses: tuple[PlanStatus, ...] = ('pending', 'in_progress', 'completed', 'cancelled')
 
     @property
@@ -56,16 +55,19 @@ class PlanUpdate(BaseTool):
 
     @property
     def tool_prompt(self) -> str:
-        return tool_prompt + self.render_plan(self.plan_items)
+        core = self.parent_core
+        plan = core.plan_items if core is not None else []
+        return tool_prompt + self.render_plan(plan)
 
     def get_openai_schema(self) -> dict[str, Any]:
         return _PLAN_UPDATE_SCHEMA
 
     async def run(self, **kwargs: Any) -> str:
+        core = self.parent_core
+        assert core is not None
         plan_items, result = self._build_items(kwargs.get('items'))
-        self.plan_items = plan_items
-        assert self.parent_core is not None
-        await self.parent_core._emit_plan(self.plan_items)
+        core.plan_items = plan_items
+        await core._emit_plan(plan_items)
         return result
 
     def _build_items(self, raw_items: list[dict[str, Any]] | None) -> tuple[list[PlanItem], str]:
