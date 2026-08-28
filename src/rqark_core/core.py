@@ -14,10 +14,10 @@ from rqark_core.types.tool import BaseTool, PlanItem, ToolContext
 
 
 class AgentCore(AgentCoreEventEmitter):
-    def __init__(self):
+    def __init__(self, timeout: float = 300, tool_timeout: float = 120):
         super().__init__()
-        self.timeout = 5
-        self.tool_timeout = 120
+        self.timeout = timeout
+        self.tool_timeout = tool_timeout
         self.plan_items: list[PlanItem] = []
 
     """
@@ -81,6 +81,12 @@ class AgentCore(AgentCoreEventEmitter):
         }
         if tools:
             params["tools"] = [t.get_openai_schema() for t in tools]
+        if provider.reasoning_effort:
+            params["reasoning_effort"] = provider.reasoning_effort
+        if thinking := provider.thinking:
+            params["extra_body"] = {
+                "chat_template_kwargs": {"enable_thinking": thinking == "enabled"},
+            }
         return params
 
     async def _parse_stream(self, stream: AsyncStream) -> AssistantMessage:
@@ -115,7 +121,8 @@ class AgentCore(AgentCoreEventEmitter):
                         break
                     await self._use_tools(msg, tool_map, history, ctx)
                 except Exception as e:
-                    await self._emit_chunk(Chunk('error', str(error := e)))
+                    error = e
+                    await self._emit_chunk(Chunk('error', f'{type(error).__name__}: {error}'))
                     self._clean_history(history)
                     break
         return history[system_count:], error

@@ -119,4 +119,4 @@ asyncio.run(main())
 | `on_subagent_message` | `SubAgentMessage`（`id` + `Message`） |
 | `on_plan` | `list[PlanItem]` |
 
-`Provider` 有 `reasoning_effort`、`thinking`、`temperature`、`top_p`、`seed`、`frequency_penalty`、`presence_penalty` 等欄位（目前未接入 API 請求），同埋 `combine`（將 system + tool prompts 合併做一個 `SystemMessage`）。
+`Provider` 有 `reasoning_effort`、`thinking`（`'enabled'` / `'disabled'`，控制 thinking 模式）、`temperature`、`top_p`、`seed`、`frequency_penalty`、`presence_penalty` 等欄位（後者暫時未接入），同埋 `combine`（將 system + tool prompts 合併做一個 `SystemMessage`）。

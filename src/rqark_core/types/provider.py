@@ -2,7 +2,6 @@ import re
 from dataclasses import dataclass
 from typing import Literal
 
-IS_THINK_MODEL: list[str] = ['deepseek-v4-pro', 'deepseek-v4-flash', 'kimi-k2.6', 'kimi-k3', 'grok-4.3', 'mimo-v2.5', 'qwen3', 'qwen-']
 DEFAULT_CONTEXT_WINDOW = 1_000_000
 _CONTEXT_WINDOWS: list[tuple[re.Pattern[str], int]] = [
     (re.compile(r'^deepseek-v4-(pro|flash)$'), 1_048_576),
@@ -61,7 +60,3 @@ class Provider:
     @property
     def context_window(self) -> int:
         return resolve_context_window(self.model_name)
-
-    @property
-    def effective_thinking(self) -> Literal['enabled', 'disabled'] | None:
-        return self.thinking if any(self.model_name.startswith(p) for p in IS_THINK_MODEL) else None
