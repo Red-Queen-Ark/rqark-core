@@ -85,8 +85,9 @@ class AgentCore(AgentCoreEventEmitter):
 
     async def _parse_stream(self, stream: AsyncStream) -> AssistantMessage:
         handle_chunk = ChunkHandler(self._emit_chunk)
-        async for chunk in stream:
-            await handle_chunk.handle(chunk)
+        async with stream:
+            async for chunk in stream:
+                await handle_chunk.handle(chunk)
         return await handle_chunk.message()
 
     async def chat(
@@ -97,26 +98,26 @@ class AgentCore(AgentCoreEventEmitter):
         tools: Sequence[BaseTool] = [],
     ) -> tuple[Sequence[Message], Exception | None]:
         error: Exception | None = None
-        client = self._get_client(provider)
         tool_map = self._get_tool_map(tools)
         ctx = ToolContext(core=self, provider=provider)
         tool_prompts = self._get_tool_prompts(tools, ctx)
         system_prompts = self._get_system_prompts(prompts)
         history, system_count = self._build_history(provider, system_prompts, tool_prompts, messages)
-        while True:
-            params = await self._build_chat_params(provider, history, tools)
-            try:
-                resp: AsyncStream = await client.chat.completions.create(**params)
-                msg = await self._parse_stream(resp)
-                history.append(msg)
-                await self._emit_message(msg)
-                if not msg.tool_calls:
+        async with self._get_client(provider) as client:
+            while True:
+                params = await self._build_chat_params(provider, history, tools)
+                try:
+                    resp: AsyncStream = await client.chat.completions.create(**params)
+                    msg = await self._parse_stream(resp)
+                    history.append(msg)
+                    await self._emit_message(msg)
+                    if not msg.tool_calls:
+                        break
+                    await self._use_tools(msg, tool_map, history, ctx)
+                except Exception as e:
+                    await self._emit_chunk(Chunk('error', str(error := e)))
+                    self._clean_history(history)
                     break
-                await self._use_tools(msg, tool_map, history, ctx)
-            except Exception as e:
-                await self._emit_chunk(Chunk('error', str(error := e)))
-                self._clean_history(history)
-                break
         return history[system_count:], error
 
     """
