@@ -2,9 +2,10 @@ import asyncio
 import json
 from collections.abc import Sequence
 from typing import Any
-
+import ssl
+import httpx
+import certifi
 from openai import AsyncOpenAI, AsyncStream
-
 from rqark_core._core.event import AgentCoreEventEmitter
 from rqark_core._core.stream import ChunkHandler
 from rqark_core.types.chat import AssistantMessage, Chunk, Message, SystemMessage, ToolCall, ToolMessage
@@ -24,9 +25,13 @@ class AgentCore(AgentCoreEventEmitter):
     Getter
     """
     def _get_client(self, provider: Provider):
+        ssl_context = ssl.create_default_context(cafile=certifi.where())
+        http_client = httpx.AsyncClient(verify=ssl_context)
         return AsyncOpenAI(
             api_key=provider.api_key,
             base_url=provider.api_base,
+            http_client=http_client,
+            default_headers={},
             timeout=self.timeout,
         )
 
