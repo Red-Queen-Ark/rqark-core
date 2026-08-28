@@ -6,7 +6,8 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "openai>=2.37.0",
-    "ddgs>=0.5.3"
+    "ddgs>=0.5.3",
+    "httpx2>=2.0.0",
 ]
 
 [build-system]
@@ -18,7 +19,6 @@ packages = ["src/rqark_core"]
 
 [dependency-groups]
 dev = [
-    "httpx>=0.28.1",
     "mypy>=2.1.0",
     "pyright>=1.1.411",
     "pytest>=9.1.1",
