@@ -9,7 +9,7 @@ Anti-sycophancy:
 - If unsure: say "I don't know." Never guess confidently.
 """
 
-class AntiSycophancy(BasePrompt):
+class AntiSycophancyPrompt(BasePrompt):
     priority = 12
 
     def get_messages(self) -> str | None:
