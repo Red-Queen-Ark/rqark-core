@@ -95,7 +95,7 @@ class AgentCore(AgentCoreEventEmitter):
         messages: Sequence[Message],
         prompts: Sequence[BasePrompt] = [],
         tools: Sequence[BaseTool] = [],
-    ) -> tuple[Exception | None, Sequence[Message]]:
+    ) -> tuple[Sequence[Message], Exception | None]:
         error: Exception | None = None
         client = self._get_client(provider)
         tool_map = self._get_tool_map(tools)
@@ -117,7 +117,7 @@ class AgentCore(AgentCoreEventEmitter):
                 await self._emit_chunk(Chunk('error', str(error := e)))
                 self._clean_history(history)
                 break
-        return error, history[system_count:]
+        return history[system_count:], error
 
     """
     Tool

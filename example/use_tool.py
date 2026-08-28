@@ -49,7 +49,7 @@ async def print_message(message: Message):
 
 async def main() -> None:
     messages = [ UserMessage('今日香港温度') ]
-    error, new_messages = await core.chat(provider=provider, messages=messages, prompts=prompts, tools=tools)
+    new_messages, error = await core.chat(provider=provider, messages=messages, prompts=prompts, tools=tools)
 
 if __name__ == "__main__":
     asyncio.run(main())

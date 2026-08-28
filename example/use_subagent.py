@@ -85,7 +85,7 @@ async def print_subagent_message(sub_msg: SubAgentMessage):
 
 async def main() -> None:
     messages = [ UserMessage('用 subagent 幫我搜尋今日香港氣温') ]
-    error, new_messages = await core.chat(provider=provider, messages=messages, prompts=parent_prompts, tools=tools)
+    new_messages, error = await core.chat(provider=provider, messages=messages, prompts=parent_prompts, tools=tools)
 
 if __name__ == "__main__":
     asyncio.run(main())

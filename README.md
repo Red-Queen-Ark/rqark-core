@@ -100,13 +100,13 @@ async def on_chunk(chunk):
 
 
 async def main():
-    error, messages = await core.chat(provider, [UserMessage('今日天氣')], prompts, tools)
+    messages, error = await core.chat(provider, [UserMessage('今日天氣')], prompts, tools)
 
 
 asyncio.run(main())
 ```
 
-`chat(provider, messages, prompts, tools)` 回傳 `(error, history)`：成功時 `error` 係 `None`，`history` 係完整對話記錄（包括工具往返）；失敗時 `error` 係 `Exception` 物件。
+`chat(provider, messages, prompts, tools)` 回傳 `(history, error)`（跟 Go 慣例，值行先、error 行後）：成功時 `error` 係 `None`，`history` 係完整對話記錄（包括工具往返）；失敗時 `error` 係 `Exception` 物件。
 
 `AgentCore` 事件：
 

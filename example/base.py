@@ -34,7 +34,7 @@ async def print_message(message: Message):
 
 async def main() -> None:
     messages = [ UserMessage('你好') ]
-    error, new_messages = await core.chat(provider=provider, messages=messages)
+    new_messages, error = await core.chat(provider=provider, messages=messages)
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -73,7 +73,7 @@ class SubAgent(BaseTool):
             await parent._emit_subagent_message(id, message)
 
         messages = [ UserMessage(prompt) ]
-        error, new_messages = await core.chat(provider=provider, messages=messages, prompts=self.prompts, tools=self.tools)
+        new_messages, error = await core.chat(provider=provider, messages=messages, prompts=self.prompts, tools=self.tools)
         if error:
             return str(error)
         return new_messages[-1].content

@@ -40,7 +40,7 @@ async def print_message(message: Message):
 
 async def main() -> None:
     messages = [ UserMessage('現在幾點?') ]
-    error, new_messages = await core.chat(provider=provider, messages=messages, prompts=prompts)
+    new_messages, error = await core.chat(provider=provider, messages=messages, prompts=prompts)
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -23,7 +23,7 @@ async def print_plan(plan_items: list[PlanItem]):
 
 async def main() -> None:
     messages = [ UserMessage('利用 plan_update 生成三個 items, 測試 1, 測試 2, 測試 3, 逐一切換狀態, 最後清空plan') ]
-    error, new_messages = await core.chat(provider=provider, messages=messages, tools=tools)
+    new_messages, error = await core.chat(provider=provider, messages=messages, tools=tools)
 
 if __name__ == "__main__":
     asyncio.run(main())
