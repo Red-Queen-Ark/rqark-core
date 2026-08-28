@@ -2,7 +2,7 @@ import asyncio
 from pathlib import Path
 from typing import Any
 
-from rqark_core.types.tool import BaseTool
+from rqark_core.types.tool import BaseTool, ToolContext
 
 SKIP_DIRS: tuple[str, ...] = ('.git', 'node_modules', '.venv', 'venv', '__pycache__', '.mypy_cache', '.pytest_cache', '.ruff_cache', '.idea', '.vscode')
 
@@ -27,7 +27,7 @@ class ListDir(BaseTool):
             },
         }
 
-    async def run(self, **kwargs: Any) -> str:
+    async def run(self, ctx: ToolContext | None = None, **kwargs: Any) -> str:
         path = str(kwargs.get('path') or '.')
         return await asyncio.to_thread(self._list, path)
 

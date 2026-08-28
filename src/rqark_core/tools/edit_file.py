@@ -5,7 +5,7 @@ import threading
 from pathlib import Path
 from typing import Any
 
-from rqark_core.types.tool import BaseTool
+from rqark_core.types.tool import BaseTool, ToolContext
 
 _EDIT_LOCKS: dict[str, threading.Lock] = {}
 _LOCKS_GUARD = threading.Lock()
@@ -143,7 +143,7 @@ class EditFile(BaseTool):
             },
         }
 
-    async def run(self, **kwargs: Any) -> str:
+    async def run(self, ctx: ToolContext | None = None, **kwargs: Any) -> str:
         path = str(kwargs.get('path', ''))
         old_string = str(kwargs.get('old_string', ''))
         new_string = str(kwargs.get('new_string', ''))

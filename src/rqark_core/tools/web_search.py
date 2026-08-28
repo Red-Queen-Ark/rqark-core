@@ -2,7 +2,7 @@ import asyncio
 from typing import Any
 
 from rqark_core.func.epistemic import KEYWORD_BLACKLIST, URL_BLACKLIST, domain_matches
-from rqark_core.types.tool import BaseTool
+from rqark_core.types.tool import BaseTool, ToolContext
 
 DDGS: Any = None
 try:
@@ -34,7 +34,7 @@ class WebSearch(BaseTool):
             },
         }
 
-    async def run(self, **kwargs: Any) -> str:
+    async def run(self, ctx: ToolContext | None = None, **kwargs: Any) -> str:
         return await asyncio.to_thread(self._search_duckduckgo, kwargs['query'])
 
     _SAFESEARCH_MAP: dict[str, str] = {'strict': 'on', 'moderate': 'moderate', 'off': 'off'}

@@ -6,7 +6,7 @@ from typing import Any
 import httpx
 
 from rqark_core.func.epistemic import grade_source
-from rqark_core.types.tool import BaseTool
+from rqark_core.types.tool import BaseTool, ToolContext
 
 
 class WebFetch(BaseTool):
@@ -65,7 +65,7 @@ class WebFetch(BaseTool):
         parts.append(f'--- Raw Content ---\n{content}')
         return '\n\n'.join(parts)
 
-    async def run(self, **kwargs: Any) -> str:
+    async def run(self, ctx: ToolContext | None = None, **kwargs: Any) -> str:
         url = kwargs['url']
         headers = {'User-Agent': self._user_agent()}
         try:

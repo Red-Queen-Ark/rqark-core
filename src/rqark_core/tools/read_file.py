@@ -2,7 +2,7 @@ import asyncio
 from pathlib import Path
 from typing import Any
 
-from rqark_core.types.tool import BaseTool
+from rqark_core.types.tool import BaseTool, ToolContext
 
 
 class ReadFile(BaseTool):
@@ -34,7 +34,7 @@ class ReadFile(BaseTool):
             },
         }
 
-    async def run(self, **kwargs: Any) -> str:
+    async def run(self, ctx: ToolContext | None = None, **kwargs: Any) -> str:
         path = str(kwargs['path'])
         offset = int(kwargs.get('offset') or 1)
         limit = int(kwargs.get('limit') or self.DEFAULT_LIMIT)

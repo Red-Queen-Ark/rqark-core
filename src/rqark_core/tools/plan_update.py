@@ -1,6 +1,6 @@
 from typing import Any
 
-from rqark_core.types.tool import BaseTool, PlanItem, PlanStatus
+from rqark_core.types.tool import BaseTool, PlanItem, PlanStatus, ToolContext
 
 _PLAN_UPDATE_SCHEMA = {
     'type': 'function',
@@ -53,17 +53,17 @@ class PlanUpdate(BaseTool):
     def display_key(self) -> str:
         return 'items'
 
-    @property
-    def tool_prompt(self) -> str:
-        core = self.parent_core
+    def tool_prompt(self, ctx: ToolContext | None = None) -> str:
+        core = ctx.core if ctx is not None else None
         plan = core.plan_items if core is not None else []
         return tool_prompt + self.render_plan(plan)
 
     def get_openai_schema(self) -> dict[str, Any]:
         return _PLAN_UPDATE_SCHEMA
 
-    async def run(self, **kwargs: Any) -> str:
-        core = self.parent_core
+    async def run(self, ctx: ToolContext | None = None, **kwargs: Any) -> str:
+        assert ctx is not None
+        core = ctx.core
         assert core is not None
         plan_items, result = self._build_items(kwargs.get('items'))
         core.plan_items = plan_items

@@ -6,7 +6,7 @@ import subprocess
 import sys
 from typing import Any
 
-from rqark_core.types.tool import BaseTool
+from rqark_core.types.tool import BaseTool, ToolContext
 
 _MAX_COMMAND_LENGTH: int = 2000
 
@@ -131,7 +131,7 @@ class Exec(BaseTool):
 
         return command, cwd, timeout, None
 
-    async def run(self, **kwargs: Any) -> str:
+    async def run(self, ctx: ToolContext | None = None, **kwargs: Any) -> str:
         command, cwd, timeout, error = self._parse_args(**kwargs)
         if error:
             return error

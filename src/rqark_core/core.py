@@ -10,7 +10,7 @@ from rqark_core._core.stream import ChunkHandler
 from rqark_core.types.chat import AssistantMessage, Chunk, Message, SystemMessage, ToolCall, ToolMessage
 from rqark_core.types.prompt import BasePrompt
 from rqark_core.types.provider import Provider
-from rqark_core.types.tool import BaseTool, PlanItem, reset_parent_core, set_parent_core
+from rqark_core.types.tool import BaseTool, PlanItem, ToolContext
 
 
 class AgentCore(AgentCoreEventEmitter):
@@ -39,12 +39,11 @@ class AgentCore(AgentCoreEventEmitter):
                 system_prompts.append(p)
         return system_prompts
 
-    def _get_tool_prompts(self, tools: Sequence[BaseTool]):
+    def _get_tool_prompts(self, tools: Sequence[BaseTool], ctx: ToolContext):
         tool_prompts = []
         for tool in tools:
-            if tool.tool_prompt:
-                prompt = SystemMessage(tool.tool_prompt)
-                tool_prompts.append(prompt)
+            if content := tool.tool_prompt(ctx):
+                tool_prompts.append(SystemMessage(content))
         return tool_prompts
 
     def _get_tool_map(self, tools: Sequence[BaseTool]):
@@ -97,31 +96,28 @@ class AgentCore(AgentCoreEventEmitter):
         prompts: Sequence[BasePrompt] = [],
         tools: Sequence[BaseTool] = [],
     ) -> tuple[Exception | None, Sequence[Message]]:
-        token = set_parent_core(self)
-        try:
-            error: Exception | None = None
-            client = self._get_client(provider)
-            tool_map = self._get_tool_map(tools)
-            tool_prompts = self._get_tool_prompts(tools)
-            system_prompts = self._get_system_prompts(prompts)
-            history, system_count = self._build_history(provider, system_prompts, tool_prompts, messages)
-            while True:
-                params = await self._build_chat_params(provider, history, tools)
-                try:
-                    resp: AsyncStream = await client.chat.completions.create(**params)
-                    msg = await self._parse_stream(resp)
-                    history.append(msg)
-                    await self._emit_message(msg)
-                    if not msg.tool_calls:
-                        break
-                    await self._use_tools(msg, tool_map, history)
-                except Exception as e:
-                    await self._emit_chunk(Chunk('error', str(error := e)))
-                    self._clean_history(history)
+        error: Exception | None = None
+        client = self._get_client(provider)
+        tool_map = self._get_tool_map(tools)
+        ctx = ToolContext(core=self, provider=provider)
+        tool_prompts = self._get_tool_prompts(tools, ctx)
+        system_prompts = self._get_system_prompts(prompts)
+        history, system_count = self._build_history(provider, system_prompts, tool_prompts, messages)
+        while True:
+            params = await self._build_chat_params(provider, history, tools)
+            try:
+                resp: AsyncStream = await client.chat.completions.create(**params)
+                msg = await self._parse_stream(resp)
+                history.append(msg)
+                await self._emit_message(msg)
+                if not msg.tool_calls:
                     break
-            return error, history[system_count:]
-        finally:
-            reset_parent_core(token)
+                await self._use_tools(msg, tool_map, history, ctx)
+            except Exception as e:
+                await self._emit_chunk(Chunk('error', str(error := e)))
+                self._clean_history(history)
+                break
+        return error, history[system_count:]
 
     """
     Tool
@@ -139,10 +135,11 @@ class AgentCore(AgentCoreEventEmitter):
         msg: AssistantMessage,
         tool_map: dict[str, BaseTool],
         history: list[Message],
+        ctx: ToolContext,
     ):
         if not msg.tool_calls:
             return
-        tool_msgs = await asyncio.gather(*[self._run_tool(tc, tool_map) for tc in msg.tool_calls], return_exceptions=True)
+        tool_msgs = await asyncio.gather(*[self._run_tool(tc, tool_map, ctx) for tc in msg.tool_calls], return_exceptions=True)
         for tc, tool_msg in zip(msg.tool_calls, tool_msgs):
             if isinstance(tool_msg, BaseException):
                 tool_msg = ToolMessage(tc.id, f"Error: {tool_msg}", tc.name, tc.arguments)
@@ -150,7 +147,7 @@ class AgentCore(AgentCoreEventEmitter):
             await self._emit_message(tool_msg)
             await self._emit_chunk(Chunk('tool_result', tool_msg))
 
-    async def _run_tool(self, tc: ToolCall, tool_map: dict[str, BaseTool]) -> ToolMessage:
+    async def _run_tool(self, tc: ToolCall, tool_map: dict[str, BaseTool], ctx: ToolContext) -> ToolMessage:
         name = tc.name
         args = tc.arguments
         tool = tool_map.get(name)
@@ -160,7 +157,7 @@ class AgentCore(AgentCoreEventEmitter):
         if kwargs is None:
             return ToolMessage(tc.id, f"Error: tool '{name}' received invalid JSON arguments", name, args)
         try:
-            result = await asyncio.wait_for(tool.run(**kwargs), timeout=self.tool_timeout)
+            result = await asyncio.wait_for(tool.run(ctx=ctx, **kwargs), timeout=self.tool_timeout)
         except asyncio.TimeoutError:
             result = f"Error: tool '{name}' timed out after {self.tool_timeout}s"
         except Exception as e:

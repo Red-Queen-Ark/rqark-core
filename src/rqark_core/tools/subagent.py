@@ -5,8 +5,7 @@ from uuid import uuid4
 from rqark_core.core import AgentCore
 from rqark_core.types.chat import Chunk, Message, UserMessage
 from rqark_core.types.prompt import BasePrompt
-from rqark_core.types.provider import Provider
-from rqark_core.types.tool import BaseTool
+from rqark_core.types.tool import BaseTool, ToolContext
 
 tool_prompt = """
 ## Subagent
@@ -22,8 +21,7 @@ You can also use multiple subagents in parallel when handling independent resear
 """
 
 class SubAgent(BaseTool):
-    def __init__(self, provider: Provider, prompts: Sequence[BasePrompt], tools: Sequence[BaseTool]):
-        self.provider = provider
+    def __init__(self, prompts: Sequence[BasePrompt], tools: Sequence[BaseTool]):
         self.prompts = prompts
         self.tools = tools
 
@@ -35,8 +33,7 @@ class SubAgent(BaseTool):
     def display_key(self) -> str:
         return 'prompt'
 
-    @property
-    def tool_prompt(self) -> str:
+    def tool_prompt(self, ctx: ToolContext | None = None) -> str:
         return tool_prompt
 
     def get_openai_schema(self) -> dict[str, Any]:
@@ -55,13 +52,16 @@ class SubAgent(BaseTool):
             },
         }
 
-    async def run(self, **kwargs: Any) -> str:
+    async def run(self, ctx: ToolContext | None = None, **kwargs: Any) -> str:
         id = str(uuid4())
         prompt: str | None = kwargs.get('prompt')
         if prompt is None:
             raise TypeError('prompt is required')
+        assert ctx is not None
+        provider = ctx.provider
+        assert provider is not None
         core = AgentCore()
-        parent = self.parent_core
+        parent = ctx.core
         assert parent is not None
 
         @core.on_chunk()
@@ -73,7 +73,7 @@ class SubAgent(BaseTool):
             await parent._emit_subagent_message(id, message)
 
         messages = [ UserMessage(prompt) ]
-        error, new_messages = await core.chat(provider=self.provider, messages=messages, prompts=self.prompts, tools=self.tools)
+        error, new_messages = await core.chat(provider=provider, messages=messages, prompts=self.prompts, tools=self.tools)
         if error:
             return str(error)
         return new_messages[-1].content

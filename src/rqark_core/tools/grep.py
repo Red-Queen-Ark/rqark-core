@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from rqark_core.types.tool import BaseTool
+from rqark_core.types.tool import BaseTool, ToolContext
 
 SKIP_DIRS: tuple[str, ...] = ('.git', 'node_modules', '.venv', 'venv', '__pycache__', '.mypy_cache', '.pytest_cache', '.ruff_cache', '.idea', '.vscode')
 
@@ -40,7 +40,7 @@ class Grep(BaseTool):
             },
         }
 
-    async def run(self, **kwargs: Any) -> str:
+    async def run(self, ctx: ToolContext | None = None, **kwargs: Any) -> str:
         pattern = str(kwargs['pattern'])
         path = str(kwargs.get('path') or '.')
         include = kwargs.get('include')

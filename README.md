@@ -45,7 +45,7 @@ pip install rqark-core --extra-index-url https://<用户名>:<token>@gitea.carhy
 ## 工具組
 
 全部繼承 `BaseTool`，傳入 `AgentCore.chat()` 就會自動變成 OpenAI function calling schema，由模型決定幾時呼叫。
-需要 parent core 嘅 tool（`PlanUpdate`、`SubAgent`）喺 `chat()` 期間可以經 `parent_core` 攞到而家執行緊嘅 `AgentCore`（用 context 注入，唔使喺 constructor 手動傳入）。同一個 tool instance 可以同時俾多個 core 用。
+需要 parent core / provider 嘅 tool（`PlanUpdate`、`SubAgent`）喺 `chat()` 期間會由 `AgentCore` 經 `ctx` 參數顯式傳入 `ToolContext`（包含 `core` 同 `provider`），唔使喺 constructor 手動傳入。同一個 tool instance 可以同時俾多個 core 用。
 
 | 工具 | name | 參數 | 用途 |
 |---|---|---|---|
@@ -91,7 +91,7 @@ core = AgentCore()
 
 prompts = [RolePrompt(), DateTimePrompt(), PlatformPrompt()]
 tools = [WebSearch(), WebFetch(), ReadFile(), WriteFile()]
-tools = tools + [SubAgent(provider, prompts, tools), PlanUpdate()]
+tools = tools + [SubAgent(prompts, tools), PlanUpdate()]
 
 
 @core.on_chunk()

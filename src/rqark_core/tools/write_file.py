@@ -2,7 +2,7 @@ import asyncio
 from pathlib import Path
 from typing import Any
 
-from rqark_core.types.tool import BaseTool
+from rqark_core.types.tool import BaseTool, ToolContext
 
 
 class WriteFile(BaseTool):
@@ -29,7 +29,7 @@ class WriteFile(BaseTool):
             },
         }
 
-    async def run(self, **kwargs: Any) -> str:
+    async def run(self, ctx: ToolContext | None = None, **kwargs: Any) -> str:
         path = str(kwargs['path'])
         content = str(kwargs['content'])
         return await asyncio.to_thread(self._write, path, content)

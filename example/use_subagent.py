@@ -32,7 +32,7 @@ subagent_tools = [
 
 core = AgentCore()
 
-subagent = SubAgent(provider, subagent_prompts, subagent_tools)
+subagent = SubAgent(subagent_prompts, subagent_tools)
 
 tools = [
     subagent,
