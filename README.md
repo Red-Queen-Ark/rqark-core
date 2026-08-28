@@ -67,6 +67,7 @@ pip install rqark-core --extra-index-url https://<用户名>:<token>@gitea.carhy
 | 提示詞 | priority | 參數 | 輸出 |
 |---|---|---|---|
 | RolePrompt | 10 | `agent_name`（default `Red Queen Ark`）、`user_name`（default `Sir`） | 角色設定 |
+| AntiSycophancy | 12 | — | 反奉承規則：唔好盲目同意、指出錯處、唔好廢話開場白/收尾、唔肯定就講唔知 |
 | CharacterPrompt | 15 | `identity`、`personality` | 身份、性格、規則（兩個都空就唔輸出） |
 | SubAgentPrompt | 20 | — | subagent 角色、規則、品質清單（未喺 `__init__` export，要 `from rqark_core.prompts.subagent import SubAgentPrompt`） |
 | PlatformPrompt | 30 | — | 平台提示（win/mac/linux 自動偵測） |
