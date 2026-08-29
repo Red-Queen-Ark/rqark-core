@@ -1,11 +1,13 @@
 import asyncio
 import json
+import ssl
 from collections.abc import Sequence
 from typing import Any
-import ssl
-import httpx
+
 import certifi
+import httpx
 from openai import AsyncOpenAI, AsyncStream
+
 from rqark_core._core.event import AgentCoreEventEmitter
 from rqark_core._core.stream import ChunkHandler
 from rqark_core.types.chat import AssistantMessage, Chunk, Message, SystemMessage, ToolCall, ToolMessage
