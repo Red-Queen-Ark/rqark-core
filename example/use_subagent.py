@@ -66,22 +66,24 @@ async def print_message(message: Message):
 
 @core.on_subagent_chunk()
 async def print_subagent_chunk(sub_chunk: SubAgentChunk):
+    tag = '/'.join(p[:8] for p in sub_chunk.path)
     c = sub_chunk.chunk
     if c.type == 'content':
-        print(f'[sub {sub_chunk.id[:8]}] {c.content}', flush=True, end='')
+        print(f'[sub {tag}] {c.content}', flush=True, end='')
     elif c.type == 'reasoning_content':
-        print(f'[sub {sub_chunk.id[:8]}] {c.content}', flush=True, end='')
+        print(f'[sub {tag}] {c.content}', flush=True, end='')
     elif c.type == 'tool_calls' and isinstance(c.content, list):
         for call in c.content:
-            print(f'[sub {sub_chunk.id[:8]}] {call.name} {call.arguments}')
+            print(f'[sub {tag}] {call.name} {call.arguments}')
     elif c.type == 'tool_result' and isinstance(c.content, ToolMessage):
-        print(f'[sub {sub_chunk.id[:8]}] {c.content.tool_name} {c.content.content}')
+        print(f'[sub {tag}] {c.content.tool_name} {c.content.content}')
     elif c.type == 'error':
-        print(f'[sub {sub_chunk.id[:8]}] [error] {c.content}')
+        print(f'[sub {tag}] [error] {c.content}')
 
 @core.on_subagent_message()
 async def print_subagent_message(sub_msg: SubAgentMessage):
-    print(f'[sub {sub_msg.id[:8]}] [message] {type(sub_msg.message).__name__}')
+    tag = '/'.join(p[:8] for p in sub_msg.path)
+    print(f'[sub {tag}] [message] {type(sub_msg.message).__name__}')
 
 async def main() -> None:
     messages = [ UserMessage('用 subagent 幫我搜尋今日香港氣温') ]

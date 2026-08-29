@@ -28,11 +28,11 @@ class AgentCoreEventEmitter(BaseEventEmitter[AgentCoreEventType]):
     async def _emit_message(self, message: Message) -> None:
         await self._emit("message", message)
 
-    async def _emit_subagent_chunk(self, agent_id: str, chunk: Chunk) -> None:
-        await self._emit("subagent_chunk", SubAgentChunk(agent_id, chunk))
+    async def _emit_subagent_chunk(self, path: tuple[str, ...], chunk: Chunk) -> None:
+        await self._emit("subagent_chunk", SubAgentChunk(path, chunk))
 
-    async def _emit_subagent_message(self, agent_id: str, message: Message) -> None:
-        await self._emit("subagent_message", SubAgentMessage(agent_id, message))
+    async def _emit_subagent_message(self, path: tuple[str, ...], message: Message) -> None:
+        await self._emit("subagent_message", SubAgentMessage(path, message))
 
     async def _emit_plan(self, items: list[PlanItem]) -> None:
         await self._emit("plan", items)

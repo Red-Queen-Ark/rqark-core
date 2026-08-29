@@ -78,10 +78,10 @@ class Chunk:
 
 @dataclass
 class SubAgentMessage:
-    id: str
+    path: tuple[str, ...]
     message: Message
 
 @dataclass
 class SubAgentChunk:
-    id: str
+    path: tuple[str, ...]
     chunk: Chunk
