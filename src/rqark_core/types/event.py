@@ -1,3 +1,3 @@
 from typing import Literal
 
-type AgentCoreEventType = Literal['chunk', 'message', 'subagent_chunk', 'subagent_message', 'plan']
+type AgentCoreEventType = Literal['chunk', 'message', 'plan']

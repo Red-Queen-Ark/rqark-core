@@ -75,13 +75,3 @@ type Message = UserMessage | ToolMessage | AssistantMessage | SystemMessage
 class Chunk:
     type: ChunkType
     content: str | ToolMessage | list[ToolCall] | Usage
-
-@dataclass
-class SubAgentMessage:
-    path: tuple[str, ...]
-    message: Message
-
-@dataclass
-class SubAgentChunk:
-    path: tuple[str, ...]
-    chunk: Chunk
