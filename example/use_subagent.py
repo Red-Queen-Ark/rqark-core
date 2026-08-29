@@ -6,7 +6,8 @@ from rqark_core.core import AgentCore
 from rqark_core.prompts import DateTimePrompt, PlatformPrompt, RolePrompt
 from rqark_core.prompts.subagent import SubAgentPrompt
 from rqark_core.tools import Grep, ListDir, ReadFile, SubAgent, WebFetch, WebSearch
-from rqark_core.types.chat import Chunk, Message, SubAgentChunk, SubAgentMessage, ToolMessage, UserMessage
+from rqark_core.types.chat import Chunk, Message, ToolMessage, UserMessage
+from rqark_core.types.event import AgentPayload
 from rqark_core.types.provider import Provider
 
 provider = Provider(MODEL_NAME, 'api_key', 'http://127.0.0.1:8080', 0, combine=True)
@@ -30,7 +31,7 @@ subagent_tools = [
     ListDir(),
 ]
 
-core = AgentCore()
+core = AgentCore(agent_id='root')
 
 subagent = SubAgent(subagent_prompts, subagent_tools)
 
@@ -42,48 +43,33 @@ tools = [
 
 last_chunk_type = Chunk('reasoning_content', '')
 
+def _sub_tag(ev: AgentPayload) -> str:
+    return '/'.join(p[:8] for p in (*ev.path, ev.agent_id)) if ev.path else ''
+
 @core.on_chunk()
-async def print_chunk(chunk: Chunk):
+async def print_chunk(ev: AgentPayload[Chunk]):
     global last_chunk_type
+    chunk = ev.payload
+    prefix = f'[sub {_sub_tag(ev)}] ' if _sub_tag(ev) else ''
     if last_chunk_type.type != chunk.type:
         print()
     if chunk.type == 'reasoning_content':
-        print(chunk.content, flush=True, end='')
+        print(f'{prefix}{chunk.content}', flush=True, end='')
     elif chunk.type == 'content':
-        print(chunk.content, flush=True, end='')
+        print(f'{prefix}{chunk.content}', flush=True, end='')
     elif chunk.type == 'tool_calls' and isinstance(chunk.content, list):
         for call in chunk.content:
-            print(call.name, call.arguments)
+            print(f'{prefix}{call.name} {call.arguments}')
     elif chunk.type == 'tool_result' and isinstance(chunk.content, ToolMessage):
-        print(chunk.content.tool_name, chunk.content.content)
+        print(f'{prefix}{chunk.content.tool_name} {chunk.content.content}')
     elif chunk.type == 'error':
-        print(f'[error] {chunk.content}')
+        print(f'{prefix}[error] {chunk.content}')
     last_chunk_type = chunk
 
 @core.on_message()
-async def print_message(message: Message):
-    print(f'[message] {type(message).__name__}')
-
-@core.on_subagent_chunk()
-async def print_subagent_chunk(sub_chunk: SubAgentChunk):
-    tag = '/'.join(p[:8] for p in sub_chunk.path)
-    c = sub_chunk.chunk
-    if c.type == 'content':
-        print(f'[sub {tag}] {c.content}', flush=True, end='')
-    elif c.type == 'reasoning_content':
-        print(f'[sub {tag}] {c.content}', flush=True, end='')
-    elif c.type == 'tool_calls' and isinstance(c.content, list):
-        for call in c.content:
-            print(f'[sub {tag}] {call.name} {call.arguments}')
-    elif c.type == 'tool_result' and isinstance(c.content, ToolMessage):
-        print(f'[sub {tag}] {c.content.tool_name} {c.content.content}')
-    elif c.type == 'error':
-        print(f'[sub {tag}] [error] {c.content}')
-
-@core.on_subagent_message()
-async def print_subagent_message(sub_msg: SubAgentMessage):
-    tag = '/'.join(p[:8] for p in sub_msg.path)
-    print(f'[sub {tag}] [message] {type(sub_msg.message).__name__}')
+async def print_message(ev: AgentPayload[Message]):
+    prefix = f'[sub {_sub_tag(ev)}] ' if _sub_tag(ev) else ''
+    print(f'{prefix}[message] {type(ev.payload).__name__}')
 
 async def main() -> None:
     messages = [ UserMessage('用 subagent 幫我搜尋今日香港氣温') ]

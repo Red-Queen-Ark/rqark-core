@@ -5,6 +5,7 @@ from model import MODEL_NAME
 from rqark_core.core import AgentCore
 from rqark_core.prompts import DateTimePrompt
 from rqark_core.types.chat import Chunk, Message, ToolMessage, UserMessage
+from rqark_core.types.event import AgentPayload
 from rqark_core.types.provider import Provider
 
 provider = Provider(MODEL_NAME, 'api_key', 'http://127.0.0.1:8080', 0, combine=True)
@@ -13,12 +14,13 @@ prompts = [
     DateTimePrompt()
 ]
 
-core = AgentCore()
+core = AgentCore(agent_id='root')
 
 last_chunk_type = Chunk('reasoning_content', '')
 @core.on_chunk()
-async def print_chunk(chunk: Chunk):
+async def print_chunk(ev: AgentPayload[Chunk]):
     global last_chunk_type
+    chunk = ev.payload
     if last_chunk_type.type != chunk.type:
         print()
     if chunk.type == 'reasoning_content':
@@ -35,8 +37,8 @@ async def print_chunk(chunk: Chunk):
     last_chunk_type = chunk
 
 @core.on_message()
-async def print_message(message: Message):
-    print(f'[message] {type(message).__name__}')
+async def print_message(ev: AgentPayload[Message]):
+    print(f'[message] {type(ev.payload).__name__}')
 
 async def main() -> None:
     messages = [ UserMessage('現在幾點?') ]
