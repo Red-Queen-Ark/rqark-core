@@ -1,5 +1,3 @@
-import asyncio
-import json
 import ssl
 from collections.abc import Sequence
 from typing import Any
@@ -9,7 +7,7 @@ import httpx
 from openai import AsyncOpenAI, AsyncStream
 
 from rqark_core._core.event import AgentCoreEventEmitter
-from rqark_core._core.stream import ChunkHandler
+from rqark_core._core.stream import ChunkHandler, ToolHandler
 from rqark_core.types.chat import AssistantMessage, Chunk, Message, SystemMessage, ToolCall, ToolMessage
 from rqark_core.types.prompt import BasePrompt
 from rqark_core.types.provider import Provider
@@ -116,6 +114,7 @@ class AgentCore(AgentCoreEventEmitter):
         tool_prompts = self._get_tool_prompts(tools, ctx)
         system_prompts = self._get_system_prompts(prompts)
         history, system_count = self._build_history(provider, system_prompts, tool_prompts, messages)
+        tool_handler = ToolHandler(self.tool_timeout, self._emit_chunk, self._emit_message)
         async with self._get_client(provider) as client:
             while True:
                 params = await self._build_chat_params(provider, history, tools)
@@ -126,55 +125,10 @@ class AgentCore(AgentCoreEventEmitter):
                     await self._emit_message(msg)
                     if not msg.tool_calls:
                         break
-                    await self._use_tools(msg, tool_map, history, ctx)
+                    await tool_handler.use_tools(msg, tool_map, history, ctx)
                 except Exception as e:
                     error = e
                     await self._emit_chunk(Chunk('error', f'{type(error).__name__}: {error}'))
                     self._clean_history(history)
                     break
         return history[system_count:], error
-
-    """
-    Tool
-    """
-    def _parse_tool_args(self, args: str | None) -> dict[str, Any] | None:
-        if not args:
-            return {}
-        try:
-            return json.loads(args)
-        except json.JSONDecodeError:
-            return None
-
-    async def _use_tools(
-        self,
-        msg: AssistantMessage,
-        tool_map: dict[str, BaseTool],
-        history: list[Message],
-        ctx: ToolContext,
-    ):
-        if not msg.tool_calls:
-            return
-        tool_msgs = await asyncio.gather(*[self._run_tool(tc, tool_map, ctx) for tc in msg.tool_calls], return_exceptions=True)
-        for tc, tool_msg in zip(msg.tool_calls, tool_msgs):
-            if isinstance(tool_msg, BaseException):
-                tool_msg = ToolMessage(tc.id, f"Error: {tool_msg}", tc.name, tc.arguments)
-            history.append(tool_msg)
-            await self._emit_message(tool_msg)
-            await self._emit_chunk(Chunk('tool_result', tool_msg))
-
-    async def _run_tool(self, tc: ToolCall, tool_map: dict[str, BaseTool], ctx: ToolContext) -> ToolMessage:
-        name = tc.name
-        args = tc.arguments
-        tool = tool_map.get(name)
-        if not tool:
-            return ToolMessage(tc.id, f"Error: tool '{name}' not found", name, args)
-        kwargs = self._parse_tool_args(args)
-        if kwargs is None:
-            return ToolMessage(tc.id, f"Error: tool '{name}' received invalid JSON arguments", name, args)
-        try:
-            result = await asyncio.wait_for(tool.run(ctx=ctx, **kwargs), timeout=self.tool_timeout)
-        except asyncio.TimeoutError:
-            result = f"Error: tool '{name}' timed out after {self.tool_timeout}s"
-        except Exception as e:
-            result = f"Error: {e}"
-        return ToolMessage(tc.id, result, name, args)
