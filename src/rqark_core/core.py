@@ -8,15 +8,15 @@ from openai import AsyncOpenAI, AsyncStream
 
 from rqark_core._core.event import AgentCoreEventEmitter
 from rqark_core._core.stream import ChunkHandler, ToolHandler
-from rqark_core.types.chat import AssistantMessage, Chunk, Message, SystemMessage, ToolCall, ToolMessage
+from rqark_core.types.chat import AssistantMessage, Chunk, Message, SystemMessage
 from rqark_core.types.prompt import BasePrompt
 from rqark_core.types.provider import Provider
 from rqark_core.types.tool import BaseTool, PlanItem, ToolContext
 
 
 class AgentCore(AgentCoreEventEmitter):
-    def __init__(self, timeout: float = 300, tool_timeout: float = 120):
-        super().__init__()
+    def __init__(self, agent_id: str = '', path: tuple[str, ...] = (), timeout: float = 300, tool_timeout: float = 120):
+        super().__init__(agent_id, path)
         self.timeout = timeout
         self.tool_timeout = tool_timeout
         self.plan_items: list[PlanItem] = []

@@ -113,10 +113,8 @@ asyncio.run(main())
 
 | 裝飾器 | 事件內容 |
 |---|---|
-| `on_chunk` | `Chunk`，`type`：`reasoning_content`、`content`、`tool_calls`、`tool_result`、`usage`、`error` |
-| `on_message` | `Message`（user / tool / assistant / system） |
-| `on_subagent_chunk` | `SubAgentChunk`（`path: tuple[str, ...]` + `Chunk`，支持多層嵌套） |
-| `on_subagent_message` | `SubAgentMessage`（`path: tuple[str, ...]` + `Message`，支持多層嵌套） |
-| `on_plan` | `list[PlanItem]` |
+| `on_chunk` | `AgentPayload[Chunk]`（`agent_id` + `path` + `Chunk`，`Chunk.type`：`reasoning_content`、`content`、`tool_calls`、`tool_result`、`usage`、`error`；支援多層 subagent 嵌套） |
+| `on_message` | `AgentPayload[Message]`（user / tool / assistant / system） |
+| `on_plan` | `AgentPayload[list[PlanItem]]` |
 
 `Provider` 有 `reasoning_effort`、`thinking`（`'enabled'` / `'disabled'`，控制 thinking 模式）、`temperature`、`top_p`、`seed`、`frequency_penalty`、`presence_penalty` 等欄位（後者暫時未接入），同埋 `combine`（將 system + tool prompts 合併做一個 `SystemMessage`）。

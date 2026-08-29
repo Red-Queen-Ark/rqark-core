@@ -3,9 +3,10 @@ from typing import Any
 from uuid import uuid4
 
 from rqark_core.core import AgentCore
-from rqark_core.types.chat import Chunk, Message, SubAgentChunk, SubAgentMessage, UserMessage
+from rqark_core.types.chat import Chunk, Message, UserMessage
+from rqark_core.types.event import AgentPayload
 from rqark_core.types.prompt import BasePrompt
-from rqark_core.types.tool import BaseTool, ToolContext
+from rqark_core.types.tool import BaseTool, PlanItem, ToolContext
 
 tool_prompt = """
 ## Subagent
@@ -60,25 +61,21 @@ class SubAgent(BaseTool):
         assert ctx is not None
         provider = ctx.provider
         assert provider is not None
-        core = AgentCore()
         parent = ctx.core
         assert parent is not None
+        core = AgentCore(agent_id=id, path=parent.path + (parent.agent_id,))
 
         @core.on_chunk()
-        async def forward_chunk(chunk: Chunk):
-            await parent._emit_subagent_chunk((id,), chunk)
+        async def forward_chunk(ev: AgentPayload[Chunk]):
+            await parent._emit('chunk', ev)
 
         @core.on_message()
-        async def forward_message(message: Message):
-            await parent._emit_subagent_message((id,), message)
+        async def forward_message(ev: AgentPayload[Message]):
+            await parent._emit('message', ev)
 
-        @core.on_subagent_chunk()
-        async def forward_sub_chunk(sub_chunk: SubAgentChunk):
-            await parent._emit_subagent_chunk((id,) + sub_chunk.path, sub_chunk.chunk)
-
-        @core.on_subagent_message()
-        async def forward_sub_message(sub_msg: SubAgentMessage):
-            await parent._emit_subagent_message((id,) + sub_msg.path, sub_msg.message)
+        @core.on_plan()
+        async def forward_plan(ev: AgentPayload[list[PlanItem]]):
+            await parent._emit('plan', ev)
 
         messages = [ UserMessage(prompt) ]
         new_messages, error = await core.chat(provider=provider, messages=messages, prompts=self.prompts, tools=self.tools)
