@@ -77,10 +77,16 @@ class AgentCore(AgentCoreEventEmitter):
     """
     Chat Loop
     """
+    def _to_api_message(self, m: Message) -> dict[str, Any]:
+        d = m.to_dict()
+        d.pop("created_at", None)
+        d.pop("reasoning_content", None)
+        return d
+
     async def _build_chat_params(self, provider: Provider, history: list[Message], tools: Sequence[BaseTool]):
         params: dict[str, Any] = {
             "model": provider.model_name,
-            "messages": [ m.to_dict() for m in history ],
+            "messages": [ self._to_api_message(m) for m in history ],
             "stream": True,
             "stream_options": {"include_usage": True},
         }

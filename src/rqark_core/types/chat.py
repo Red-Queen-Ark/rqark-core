@@ -1,8 +1,13 @@
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from typing import Literal
 
 type Role = Literal['system', 'user', 'assistant', 'tool']
 type ChunkType = Literal['reasoning_content', 'content', 'tool_calls', 'tool_result', 'usage', 'error']
+
+
+def _utc_now() -> datetime:
+    return datetime.now(UTC)
 
 @dataclass
 class Usage:
@@ -28,9 +33,14 @@ class ToolCall:
 class UserMessage:
     content: str
     role: Literal['user'] = 'user'
+    created_at: datetime = field(default_factory=_utc_now)
 
     def to_dict(self) -> dict[str, str]:
-        return asdict(self)
+        return {
+            'role': self.role,
+            'content': self.content,
+            'created_at': self.created_at.isoformat(),
+        }
 
 @dataclass
 class ToolMessage:
@@ -39,12 +49,14 @@ class ToolMessage:
     tool_name: str | None = None
     arguments: str | None = None
     role: Literal['tool'] = 'tool'
+    created_at: datetime = field(default_factory=_utc_now)
 
     def to_dict(self) -> dict[str, str]:
         return {
-            "role": self.role,
-            "tool_call_id": self.tool_call_id,
-            "content": self.content,
+            'role': self.role,
+            'tool_call_id': self.tool_call_id,
+            'content': self.content,
+            'created_at': self.created_at.isoformat(),
         }
 
 @dataclass
@@ -54,20 +66,32 @@ class AssistantMessage:
     reasoning_content: str | None = None
     usage: Usage | None = None
     role: Literal['assistant'] = 'assistant'
+    created_at: datetime = field(default_factory=_utc_now)
 
     def to_dict(self) -> dict:
-        d: dict = {"role": self.role, "content": self.content}
+        d: dict = {
+            'role': self.role,
+            'content': self.content,
+            'created_at': self.created_at.isoformat(),
+        }
         if self.tool_calls:
-            d["tool_calls"] = [tc.to_dict() for tc in self.tool_calls]
+            d['tool_calls'] = [tc.to_dict() for tc in self.tool_calls]
+        if self.reasoning_content:
+            d['reasoning_content'] = self.reasoning_content
         return d
 
 @dataclass
 class SystemMessage:
     content: str
     role: Literal['system'] = 'system'
+    created_at: datetime = field(default_factory=_utc_now)
 
     def to_dict(self) -> dict[str, str]:
-        return asdict(self)
+        return {
+            'role': self.role,
+            'content': self.content,
+            'created_at': self.created_at.isoformat(),
+        }
 
 type Message = UserMessage | ToolMessage | AssistantMessage | SystemMessage
 
