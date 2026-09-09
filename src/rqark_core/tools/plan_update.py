@@ -12,7 +12,7 @@ _PLAN_UPDATE_SCHEMA = {
             'properties': {
                 'items': {
                     'type': 'array',
-                    'description': 'All plan items with their current status. Use empty array to clear the plan.',
+                    'description': 'All plan items with their current status. Use empty array to clear the plan. The plan is also cleared automatically when all items are completed.',
                     'items': {
                         'type': 'object',
                         'properties': {
@@ -37,7 +37,7 @@ You have access to a `plan_update` tool for tracking explicitly requested work. 
 - Mark the current item as `in_progress` when you begin working on it
 - Mark items as `completed` immediately after finishing them
 - Only ONE item in `in_progress` at a time
-- Use `plan_update` with empty `items` to clear the plan when done
+- The plan clears automatically when all items are marked `completed`; use `plan_update` with empty `items` to clear it explicitly anytime
 - Stop working and report results once all planned items are completed
 """
 
@@ -90,6 +90,8 @@ class PlanUpdate(BaseTool):
                     item.status = 'pending'
         if not plan_items:
             return [], 'Plan cleared.'
+        if all(item.status == 'completed' for item in plan_items):
+            return [], 'All items completed. Plan cleared.'
         return plan_items, f'Updating plan: {len(plan_items)} items'
 
     def render_plan(self, items: list[PlanItem]) -> str:
