@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
 from rqark_core.types.provider import Provider
 
@@ -11,6 +11,12 @@ if TYPE_CHECKING:
 class ToolContext:
     core: 'AgentCore | None' = None
     provider: Provider | None = None
+
+
+class ToolDict(TypedDict):
+    name: str
+    params: dict[str, Any]
+
 
 class BaseTool(ABC):
     @property
@@ -29,6 +35,13 @@ class BaseTool(ABC):
 
     @abstractmethod
     async def run(self, ctx: ToolContext | None = None, **kwargs: Any) -> str: ...
+
+    def params(self) -> dict[str, Any]:
+        return {}
+
+    def to_dict(self) -> ToolDict:
+        return {'name': type(self).__name__, 'params': self.params()}
+
 
 type PlanStatus = Literal['pending', 'in_progress', 'completed', 'cancelled']
 ICONS_MAP: dict[PlanStatus, str] = {'pending': ' ', 'in_progress': '>', 'completed': 'x', 'cancelled': '-'}

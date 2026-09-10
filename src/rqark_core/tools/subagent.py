@@ -82,3 +82,6 @@ class SubAgent(BaseTool):
         if error:
             return str(error)
         return new_messages[-1].content
+
+    def params(self) -> dict[str, Any]:
+        return {'prompts': [p.to_dict() for p in self.prompts], 'tools': [t.to_dict() for t in self.tools]}
