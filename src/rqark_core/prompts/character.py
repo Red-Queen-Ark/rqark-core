@@ -30,3 +30,6 @@ class CharacterPrompt(BasePrompt):
         )
 
         return '\n\n'.join(parts)
+
+    def params(self) -> dict[str, str]:
+        return {'identity': self.identity, 'personality': self.personality}

@@ -10,3 +10,6 @@ class RolePrompt(BasePrompt):
 
     def get_messages(self) -> str:
         return f'## Role\nYour name is **{self.agent_name}**. The human you are talking to is named **{self.user_name}**. Address them by name naturally.'
+
+    def params(self) -> dict[str, str]:
+        return {'agent_name': self.agent_name, 'user_name': self.user_name}

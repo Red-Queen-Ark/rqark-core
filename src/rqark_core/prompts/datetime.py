@@ -17,3 +17,6 @@ class DateTimePrompt(BasePrompt):
         offset_hours = int(utc_offset.total_seconds() / 3600) if utc_offset else 0
         sign = '+' if offset_hours >= 0 else ''
         return f'## Current Time\nNow: {now:%Y-%m-%d %H:%M:%S %A} ({tz_name}, UTC{sign}{offset_hours})'
+
+    def params(self) -> dict[str, str]:
+        return {'timezone_name': str(self._tz)}

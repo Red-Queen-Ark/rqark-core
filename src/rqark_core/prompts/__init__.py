@@ -5,6 +5,8 @@ from .datetime import DateTimePrompt
 from .git_project import GitProjectPrompt
 from .platform import PlatformPrompt
 from .role import RolePrompt
+from .subagent import SubAgentPrompt
+from .workspace import WorkspacePrompt
 
 __all__ = [
     "AntiSycophancyPrompt",
@@ -13,5 +15,7 @@ __all__ = [
     "RolePrompt",
     "CharacterPrompt",
     "GitProjectPrompt",
-    "PlatformPrompt"
+    "PlatformPrompt",
+    "SubAgentPrompt",
+    "WorkspacePrompt"
 ]
