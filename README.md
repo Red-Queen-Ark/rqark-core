@@ -59,6 +59,13 @@ pip install rqark-core --extra-index-url https://<用户名>:<token>@gitea.carhy
 | WebFetch | `web_fetch` | `url` | 抓網頁變純文字（30s timeout，HTML 最多 200 行，帶信源評分） |
 | PlanUpdate | `plan_update` | `items`（array of `{id, content, status}`） | 更新 session plan；會將當前 plan 渲染做 tool prompt |
 | SubAgent | `subagent` | `prompt` | 用獨立 context 委派任務；chunk/message 事件以 `(id, ...)` 轉發返父 core |
+| GitHub | `github` | `action` + 各 action 參數 | GitHub API：repos、issues、PRs、milestones、labels、branches、releases |
+| Gitea | `gitea` | `action` + 各 action 參數 | Gitea API（同上，另加 `list_commits`、`compare`、`create_branch`、`delete_branch`、`set_issue_labels`） |
+| GitLab | `gitlab` | `action` + 各 action 參數 | GitLab API（同上，另加 `list_commits`、`compare`） |
+
+Git tool 全部繼承 `BaseGitTool`，用單一 `action` 參數分派（例如 `list_issues`、`create_pull_request`、`merge_pull_request`）。認證由環境變數讀取：`GITHUB_TOKEN`、`GITEA_TOKEN`（另加 `GITEA_USERNAME`）、`GITLAB_TOKEN`；base URL 可用 `GITHUB_BASE_URL`、`GITEA_BASE_URL`、`GITLAB_BASE_URL` 覆寫（預設 `api.github.com`、`gitea.com`、`gitlab.com`）。`clone_repo` 會 clone 到當前工作目錄嘅 `repos/<repo>`。
+
+Gitea 嘅 `create_issue`、`create_pull_request`、`update_pull_request` 支援 `labels`（label ID array）、`milestone`（milestone ID）、`due_date`；`list_labels` / `list_milestones` 輸出會帶 ID。`merge_pull_request` 嘅 `merge_method` 另有 `fast-forward-only`，並支援 `force_merge`。
 
 ## 提示詞
 

@@ -1,5 +1,6 @@
 from .edit_file import EditFile
 from .exec import Exec
+from .git import BaseGitTool, Gitea, GitHub, GitLab
 from .grep import Grep
 from .list_dir import ListDir
 from .plan_update import PlanUpdate
@@ -10,8 +11,12 @@ from .web_search import WebSearch
 from .write_file import WriteFile
 
 __all__ = [
+    'BaseGitTool',
     'EditFile',
     'Exec',
+    'Gitea',
+    'GitHub',
+    'GitLab',
     'Grep',
     'ListDir',
     'ReadFile',
