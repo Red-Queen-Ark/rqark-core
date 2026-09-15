@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Literal
+from typing import Literal, TypedDict
 
 type Role = Literal['system', 'user', 'assistant', 'tool']
 type ChunkType = Literal['reasoning_content', 'content', 'tool_calls', 'tool_result', 'usage', 'error']
@@ -30,15 +30,46 @@ class ToolCall:
         }
 
 @dataclass
+class UserContent:
+    content: str
+    type: Literal['text'] = 'text'
+    
+    def to_dict(self):
+        return {
+            "type": self.type,
+            "text": self.content,
+        }
+
+@dataclass
+class UserImageContent:
+    url: str
+    type: Literal['image_url'] = 'image_url'
+    
+    def to_dict(self):
+        return {
+            "type": self.type,
+            "image_url": {"url": self.url },
+        }
+
+class UserMessageDict(TypedDict):
+    role: str
+    content:list[dict]
+    created_at: str
+
+@dataclass
 class UserMessage:
     content: str
     role: Literal['user'] = 'user'
     created_at: datetime = field(default_factory=_utc_now)
-
-    def to_dict(self) -> dict[str, str]:
+    images: list[str] = field(default_factory=list)
+    
+    def to_dict(self) -> UserMessageDict:
+        content: list[dict] = [ UserContent(self.content).to_dict() ]
+        for img in self.images:
+            content.append( UserImageContent(img).to_dict() )
         return {
             'role': self.role,
-            'content': self.content,
+            'content': content,
             'created_at': self.created_at.isoformat(),
         }
 
