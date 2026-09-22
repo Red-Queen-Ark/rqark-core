@@ -65,7 +65,7 @@ class Gitea(BaseGitTool):
     def _clone_url(self, repo: str) -> str:
         host = urlsplit(self._base_url).netloc or 'gitea.com'
         if not self._username:
-            raise ValueError('Gitea username not configured (pass env_username in params)')
+            raise ValueError('Gitea username not configured (pass username in params)')
         return f'https://{self._username}:{self._access_token}@{host}/{repo}.git'
 
     def _optional(self, p: dict[str, Any], payload: dict[str, Any], keys: tuple[str, ...]) -> dict[str, Any]:
