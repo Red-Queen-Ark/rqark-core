@@ -14,8 +14,6 @@ class GitLab(BaseGitTool):
     api_description = 'Interact with GitLab: list/clone repos, manage issues, MRs, milestones, labels, branches, releases, commits, and compare.'
     auth_header_name = 'PRIVATE-TOKEN'
     auth_token_prefix = ''
-    env_token = 'GITLAB_TOKEN'
-    env_base_url = 'GITLAB_BASE_URL'
     default_base_url = 'https://gitlab.com'
 
     @property

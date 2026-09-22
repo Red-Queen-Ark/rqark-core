@@ -11,8 +11,6 @@ class GitHub(BaseGitTool):
     platform_name = 'GitHub'
     api_path_prefix = ''
     api_description = 'Interact with GitHub: list/clone repos, manage issues, PRs, milestones, labels, branches, and releases.'
-    env_token = 'GITHUB_TOKEN'
-    env_base_url = 'GITHUB_BASE_URL'
     default_base_url = 'https://api.github.com'
     extra_headers = {'Accept': 'application/vnd.github.v3+json'}
 

@@ -16,9 +16,6 @@ class Gitea(BaseGitTool):
     max_page_size = 50
     auth_token_prefix = 'token '
     extra_headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
-    env_token = 'GITEA_TOKEN'
-    env_base_url = 'GITEA_BASE_URL'
-    env_username = 'GITEA_USERNAME'
     default_base_url = 'https://gitea.com'
 
     @property
@@ -68,11 +65,8 @@ class Gitea(BaseGitTool):
     def _clone_url(self, repo: str) -> str:
         host = urlsplit(self._base_url).netloc or 'gitea.com'
         if not self._username:
-            raise ValueError('Gitea username not configured (set GITEA_USERNAME)')
+            raise ValueError('Gitea username not configured (pass env_username in params)')
         return f'https://{self._username}:{self._access_token}@{host}/{repo}.git'
-
-    def params(self) -> dict[str, Any]:
-        return {**super().params(), 'env_username': self.env_username}
 
     def _optional(self, p: dict[str, Any], payload: dict[str, Any], keys: tuple[str, ...]) -> dict[str, Any]:
         for key in keys:

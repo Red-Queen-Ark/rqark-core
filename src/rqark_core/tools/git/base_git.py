@@ -1,6 +1,5 @@
 import asyncio
 import json
-import os
 import subprocess
 from collections.abc import Callable
 from pathlib import Path
@@ -24,22 +23,20 @@ class BaseGitTool(BaseTool):
     auth_header_name: ClassVar[str] = 'Authorization'
     auth_token_prefix: ClassVar[str] = 'Bearer '
     extra_headers: ClassVar[dict[str, str] | None] = None
-    env_token: ClassVar[str] = ''
-    env_base_url: ClassVar[str] = ''
-    env_username: ClassVar[str] = ''
     default_base_url: ClassVar[str] = ''
 
-    def __init__(self) -> None:
-        self._access_token: str = os.getenv(self.env_token, '')
-        self._base_url: str = os.getenv(self.env_base_url, self.default_base_url).rstrip('/')
-        self._username: str = os.getenv(self.env_username, '')
+    def __init__(self, env_token: str = '', env_base_url: str = '', env_username: str = '') -> None:
+        self._access_token: str = env_token
+        self._base_url: str = (env_base_url or self.default_base_url).rstrip('/')
+        self._username: str = env_username
 
     @property
     def display_key(self) -> str:
         return 'repo'
 
     def params(self) -> dict[str, Any]:
-        return {'env_token': self.env_token, 'env_base_url': self.env_base_url}
+        values = {'env_token': self._access_token, 'env_base_url': self._base_url, 'env_username': self._username}
+        return {k: v for k, v in values.items() if v}
 
     async def run(self, ctx: ToolContext | None = None, **kwargs: Any) -> str:
         return await asyncio.to_thread(self._dispatch, kwargs)
@@ -49,7 +46,7 @@ class BaseGitTool(BaseTool):
         if action not in self._action_names():
             return json.dumps({'error': f'Unknown action: {action}'})
         if not self._access_token:
-            return json.dumps({'error': f'{self.platform_name} token not configured (set {self.env_token})'})
+            return json.dumps({'error': f'{self.platform_name} token not configured (pass env_token in params)'})
         try:
             return str(getattr(self, f'_{action}')(kwargs))
         except Exception as e:
