@@ -1,5 +1,6 @@
 import asyncio
 import json
+from dataclasses import replace
 from typing import Any
 
 from openai.types.chat.chat_completion_chunk import ChatCompletionChunk, ChoiceDelta
@@ -123,7 +124,7 @@ class ToolHandler:
         if kwargs is None:
             return ToolMessage(tc.id, f"Error: tool '{name}' received invalid JSON arguments", name, args)
         try:
-            result = await asyncio.wait_for(tool.run(ctx=ctx, **kwargs), timeout=self.tool_timeout)
+            result = await asyncio.wait_for(tool.run(ctx=replace(ctx, tool_call_id=tc.id), **kwargs), timeout=self.tool_timeout)
         except asyncio.TimeoutError:
             result = f"Error: tool '{name}' timed out after {self.tool_timeout}s"
         except Exception as e:

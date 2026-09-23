@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 class ToolContext:
     core: 'AgentCore | None' = None
     provider: Provider | None = None
+    tool_call_id: str | None = None
 
 
 class ToolDict(TypedDict):
