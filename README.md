@@ -1,8 +1,9 @@
 # rqark-core
+## Overview
+無狀態 AI 引擎，提供 常用 Agent Tool 和 Prompt，統一串流 Agent Event 接口
 
-## 安裝
-
-喺專案 `pyproject.toml` 加入：
+## Quick Start
+在專案 `pyproject.toml` 中加入
 
 ```toml
 [[tool.uv.index]]
@@ -15,7 +16,7 @@ explicit = true
 rqark-core = { index = "gitea" }
 ```
 
-設定認證：
+設定認證
 
 ```bash
 uv auth login https://gitea.carhyme.top/api/packages/RedQueenArk/pypi/simple
@@ -23,29 +24,20 @@ uv auth login https://gitea.carhyme.top/api/packages/RedQueenArk/pypi/simple
 
 Username 填 Gitea 帳戶名，Password 填 Personal Access Token（scope: `read:package`）。
 
-CI 用環境變數：
-
-```bash
-export UV_INDEX_GITEA_USERNAME=<用户名>
-export UV_INDEX_GITEA_PASSWORD=<token>
-```
-
 安裝：
 
 ```bash
 uv add rqark-core
 ```
 
-唔用 uv 嘅話：
+## Features
+### Provider
+- `Provider` 有 `reasoning_effort`、`thinking`（`'enabled'` / `'disabled'`，控制 thinking 模式）。
+- `temperature`、`top_p`、`seed`、`frequency_penalty`、`presence_penalty` 等欄位（後者暫時未接入），
+- `combine`（將 system + tool prompts 合併做一個 `SystemMessage`）。
 
-```bash
-pip install rqark-core --extra-index-url https://<用户名>:<token>@gitea.carhyme.top/api/packages/RedQueenArk/pypi/simple/
-```
-
-## 工具組
-
-全部繼承 `BaseTool`，傳入 `AgentCore.chat()` 就會自動變成 OpenAI function calling schema，由模型決定幾時呼叫。
-需要 parent core / provider 嘅 tool（`PlanUpdate`、`SubAgent`）喺 `chat()` 期間會由 `AgentCore` 經 `ctx` 參數顯式傳入 `ToolContext`（包含 `core` 同 `provider`），唔使喺 constructor 手動傳入。同一個 tool instance 可以同時俾多個 core 用。
+### Tools
+- 全部繼承 `BaseTool`，傳入 `AgentCore.chat()` 就會自動變成 OpenAI function calling schema，由模型決定幾時呼叫。
 
 | 工具 | name | 參數 | 用途 |
 |---|---|---|---|
@@ -67,23 +59,37 @@ Git tool 全部繼承 `BaseGitTool`，用單一 `action` 參數分派（例如 `
 
 Gitea 嘅 `create_issue`、`create_pull_request`、`update_pull_request` 支援 `labels`（label ID array）、`milestone`（milestone ID）、`due_date`；`list_labels` / `list_milestones` 輸出會帶 ID。`merge_pull_request` 嘅 `merge_method` 另有 `fast-forward-only`，並支援 `force_merge`。
 
-## 提示詞
-
-全部繼承 `BasePrompt`，有 `priority` 同 `get_messages()`。`AgentCore` 內部會自動按 `priority` 排序，`get_messages()` 回傳 `None` 就跳過。用嚟生成 system prompt 內容。
+### Prompts
+- 全部繼承 `BasePrompt`，有 `priority` 同 `get_messages()`。
+- `AgentCore` 內部會自動按 `priority` 排序，`get_messages()` 回傳 `None` 就跳過。
+- 用嚟生成 system prompt 內容。
 
 | 提示詞 | priority | 參數 | 輸出 |
 |---|---|---|---|
 | RolePrompt | 10 | `agent_name`（default `Red Queen Ark`）、`user_name`（default `Sir`） | 角色設定 |
 | AntiSycophancyPrompt | 12 | — | 反奉承規則：唔好盲目同意、指出錯處、唔好廢話開場白/收尾、唔肯定就講唔知 |
 | CharacterPrompt | 15 | `identity`、`personality` | 身份、性格、規則（兩個都空就唔輸出） |
-| SubAgentPrompt | 20 | — | subagent 角色、規則、品質清單（未喺 `__init__` export，要 `from rqark_core.prompts.subagent import SubAgentPrompt`） |
+| SubAgentPrompt | 20 | — | subagent 角色、規則、品質清單 |
 | PlatformPrompt | 30 | — | 平台提示（win/mac/linux 自動偵測） |
-| WorkspacePrompt | 40 | `cwd` | 工作目錄（未喺 `__init__` export，要 `from rqark_core.prompts.workspace import WorkspacePrompt`） |
+| WorkspacePrompt | 40 | `cwd` | 指明Agent當前工作目錄 |
 | AgentsMdPrompt | 50 | `cwd` | 讀 `AGENTS.md` 做專案規則（無檔案就唔輸出） |
 | DateTimePrompt | 60 | `timezone_name`（default `Asia/Hong_Kong`） | 當前時間同 UTC offset |
 | GitProjectPrompt | 70 | `cwd` | Git 分支、HEAD、status（最多 40 行）、最近 10 個 commit |
 
-## 用法
+### Agent Core
+#### Event
+| 裝飾器 | 事件內容 |
+|---|---|
+| `on_chunk` | `AgentPayload[Chunk]`（`agent_id` + `path` + `Chunk`，`Chunk.type`：`reasoning_content`、`content`、`tool_calls`、`tool_result`、`usage`、`error`；支援多層 subagent 嵌套） |
+| `on_message` | `AgentPayload[Message]`（user / tool / assistant / system） |
+| `on_plan` | `AgentPayload[list[PlanItem]]` |
+
+#### Plan
+
+#### Sub Agent
+
+
+## Example
 
 ```python
 import asyncio
@@ -101,27 +107,14 @@ prompts = [RolePrompt(), DateTimePrompt(), PlatformPrompt()]
 tools = [WebSearch(), WebFetch(), ReadFile(), WriteFile()]
 tools = tools + [SubAgent(prompts, tools), PlanUpdate()]
 
-
 @core.on_chunk()
 async def on_chunk(chunk):
     print(chunk.type, chunk.content)
 
-
 async def main():
-    messages, error = await core.chat(provider, [UserMessage('今日天氣')], prompts, tools)
-
+    history, error = await core.chat(provider, [UserMessage('今日天氣')], prompts, tools)
 
 asyncio.run(main())
 ```
 
-`chat(provider, messages, prompts, tools)` 回傳 `(history, error)`（跟 Go 慣例，值行先、error 行後）：成功時 `error` 係 `None`，`history` 係完整對話記錄（包括工具往返）；失敗時 `error` 係 `Exception` 物件。
-
-`AgentCore` 事件：
-
-| 裝飾器 | 事件內容 |
-|---|---|
-| `on_chunk` | `AgentPayload[Chunk]`（`agent_id` + `path` + `Chunk`，`Chunk.type`：`reasoning_content`、`content`、`tool_calls`、`tool_result`、`usage`、`error`；支援多層 subagent 嵌套） |
-| `on_message` | `AgentPayload[Message]`（user / tool / assistant / system） |
-| `on_plan` | `AgentPayload[list[PlanItem]]` |
-
-`Provider` 有 `reasoning_effort`、`thinking`（`'enabled'` / `'disabled'`，控制 thinking 模式）、`temperature`、`top_p`、`seed`、`frequency_penalty`、`presence_penalty` 等欄位（後者暫時未接入），同埋 `combine`（將 system + tool prompts 合併做一個 `SystemMessage`）。
+- 成功時 `error` 係 `None`，`history` 係完整對話記錄（包括工具往返）；失敗時 `error` 係 `Exception` 物件。
