@@ -33,7 +33,7 @@ class ToolCall:
 class UserContent:
     content: str
     type: Literal['text'] = 'text'
-    
+
     def to_dict(self):
         return {
             "type": self.type,
@@ -44,7 +44,7 @@ class UserContent:
 class UserImageContent:
     url: str
     type: Literal['image_url'] = 'image_url'
-    
+
     def to_dict(self):
         return {
             "type": self.type,
@@ -62,7 +62,7 @@ class UserMessage:
     role: Literal['user'] = 'user'
     created_at: datetime = field(default_factory=_utc_now)
     images: list[str] = field(default_factory=list)
-    
+
     def to_dict(self) -> UserMessageDict:
         content: list[dict] = [ UserContent(self.content).to_dict() ]
         for img in self.images:

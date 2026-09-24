@@ -17,7 +17,6 @@ Use subagent when a task requires:
 - Any investigation that would take 2+ tool calls
 - Anything that risks cluttering your main context with too much data
 Only keep it in main context if it is a single, trivial read (e.g. reading one known file).
-The subagent runs independently with read-only tools by default; specify tool_allowlist if it needs write access (write_file, edit_file).
 You can also use multiple subagents in parallel when handling independent research tasks.
 """
 
@@ -42,7 +41,7 @@ class SubAgent(BaseTool):
             'type': 'function',
             'function': {
                 'name': self.name,
-                'description': 'Delegate an investigation or research task to an isolated subagent with its own context. The subagent runs independently, streams progress in real-time, and returns only the final result. Use this aggressively for multi-step research, exploring code, or any task that would clutter your main context. By default the subagent has read-only tools; use tool_allowlist to grant write tools (write_file, edit_file) when the task requires code modification.',
+                'description': 'Delegate an investigation or research task to an isolated subagent with its own context. The subagent runs independently, streams progress in real-time, and returns only the final result. Use this aggressively for multi-step research, exploring code, or any task that would clutter your main context.',
                 'parameters': {
                     'type': 'object',
                     'properties': {
