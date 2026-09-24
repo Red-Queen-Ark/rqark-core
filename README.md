@@ -85,9 +85,14 @@ Gitea 嘅 `create_issue`、`create_pull_request`、`update_pull_request` 支援 
 | `on_plan` | `AgentPayload[list[PlanItem]]` |
 
 #### Plan
+用 `PlanUpdate()` 開 plan，追蹤 multi-step task。Plan 存喺 `AgentCore.plan_items`（每個 core 各自一份），每次呼叫要回傳**完整** items list。
+
+`PlanItem` 有 `id`、`content`、`status`（`pending` / `in_progress` / `completed` / `cancelled`）。同時只准一個 `in_progress`；空 list 或全部 completed 會自動清空。當前 plan 會 render 入 tool prompt，每次更新都會 fire `on_plan`。
 
 #### Sub Agent
+`SubAgent(prompts, tools)` 用獨立 context 跑一個新 `AgentCore`，process 完只回最終字串結果。Provider 沿用父 core，prompts / tools 由 constructor 決定。
 
+子 core 嘅 `chunk` / `message` / `plan` 會連 `agent_id`、`path` 一齊轉發返父 core，所以 listener 可以靠 `(path, agent_id)` 分辨層數，支援多層嵌套。冇遞歸深度限制。
 
 ## Example
 
