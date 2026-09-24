@@ -22,9 +22,7 @@ rqark-core = { index = "gitea" }
 uv auth login https://gitea.carhyme.top/api/packages/RedQueenArk/pypi/simple
 ```
 
-Username 填 Gitea 帳戶名，Password 填 Personal Access Token（scope: `read:package`）。
-
-安裝：
+安裝
 
 ```bash
 uv add rqark-core
