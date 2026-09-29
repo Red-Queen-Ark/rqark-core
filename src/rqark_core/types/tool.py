@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
 from rqark_core.types.provider import Provider
@@ -56,3 +56,8 @@ class PlanItem:
     @property
     def icon(self):
         return ICONS_MAP.get(self.status, ' ')
+
+    def to_dict(self):
+        d = asdict(self)
+        d['icon'] = self.icon
+        return d

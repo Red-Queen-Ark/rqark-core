@@ -1,5 +1,5 @@
 import re
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Literal
 
 DEFAULT_CONTEXT_WINDOW = 1_000_000
@@ -44,7 +44,7 @@ class Provider:
     api_base: str
     priority: int
     name: str = ''
-    reasoning_effort: Literal['high', 'max'] | None = None
+    reasoning_effort: Literal['low', 'high', 'max'] | None = None
     thinking: Literal['enabled', 'disabled'] | None = None
     temperature: float | None = None
     top_p: float | None = None
@@ -60,3 +60,8 @@ class Provider:
     @property
     def context_window(self) -> int:
         return resolve_context_window(self.model_name)
+
+    def to_dict(self):
+        d = asdict(self)
+        d['context_window'] = self.context_window
+        return d

@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from typing import Literal, TypedDict
 
@@ -14,6 +14,9 @@ class Usage:
     prompt_tokens: int
     completion_tokens: int
     total_tokens: int
+
+    def to_dict(self) -> dict[str, int]:
+        return asdict(self)
 
 @dataclass
 class ToolCall:
@@ -34,7 +37,7 @@ class UserContent:
     content: str
     type: Literal['text'] = 'text'
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, str]:
         return {
             "type": self.type,
             "text": self.content,
@@ -45,7 +48,7 @@ class UserImageContent:
     url: str
     type: Literal['image_url'] = 'image_url'
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
         return {
             "type": self.type,
             "image_url": {"url": self.url },
@@ -130,3 +133,14 @@ type Message = UserMessage | ToolMessage | AssistantMessage | SystemMessage
 class Chunk:
     type: ChunkType
     content: str | ToolMessage | list[ToolCall] | Usage
+
+    def to_dict(self):
+        content = self.content
+        if isinstance(content, list):
+            content = [ c.to_dict() for c in content ]
+        elif isinstance(content, (Usage, ToolMessage)):
+            content = content.to_dict()
+        return {
+            'type': self.type,
+            'content': content
+        }
