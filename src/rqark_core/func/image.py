@@ -35,8 +35,8 @@ def detect_mime(data: bytes, path: Path | None = None) -> str:
             return 'image/heic'
         if brand in (b'heif', b'mif1', b'msf1'):
             return 'image/heif'
-    if path is not None and (mime := _SUFFIX.get(path.suffix.lower())):
-        return mime
+    if path is not None and (suffix_mime := _SUFFIX.get(path.suffix.lower())):
+        return suffix_mime
     raise ValueError(f'unsupported image format: {path}')
 
 
