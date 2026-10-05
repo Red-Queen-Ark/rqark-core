@@ -78,7 +78,7 @@ class AgentCore(AgentCoreEventEmitter):
     Chat Loop
     """
     def _to_api_message(self, m: Message) -> dict[str, Any]:
-        d = m.to_dict()
+        d: dict[str, Any] = dict(m.to_dict())
         d.pop("created_at", None)
         d.pop("reasoning_content", None)
         return d
