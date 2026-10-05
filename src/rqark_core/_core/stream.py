@@ -123,10 +123,11 @@ class ToolHandler:
         kwargs = self._parse_tool_args(args)
         if kwargs is None:
             return ToolMessage(tc.id, f"Error: tool '{name}' received invalid JSON arguments", name, args)
+        timeout = tool.timeout if tool.timeout is not None else self.tool_timeout
         try:
-            result = await asyncio.wait_for(tool.run(ctx=replace(ctx, tool_call_id=tc.id), **kwargs), timeout=self.tool_timeout)
+            result = await asyncio.wait_for(tool.run(ctx=replace(ctx, tool_call_id=tc.id), **kwargs), timeout=timeout)
         except asyncio.TimeoutError:
-            result = f"Error: tool '{name}' timed out after {self.tool_timeout}s"
+            result = f"Error: tool '{name}' timed out after {timeout}s"
         except Exception as e:
             result = f"Error: {e}"
         return ToolMessage(tc.id, result, name, args)

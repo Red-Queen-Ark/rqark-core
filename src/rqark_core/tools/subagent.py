@@ -21,9 +21,12 @@ You can also use multiple subagents in parallel when handling independent resear
 """
 
 class SubAgent(BaseTool):
-    def __init__(self, prompts: Sequence[BasePrompt], tools: Sequence[BaseTool]):
+    DEFAULT_TIMEOUT = 600
+
+    def __init__(self, prompts: Sequence[BasePrompt], tools: Sequence[BaseTool], timeout: float = DEFAULT_TIMEOUT):
         self.prompts = prompts
         self.tools = tools
+        self._timeout = timeout
 
     @property
     def name(self) -> str:
@@ -32,6 +35,10 @@ class SubAgent(BaseTool):
     @property
     def display_key(self) -> str:
         return 'prompt'
+
+    @property
+    def timeout(self) -> float:
+        return self._timeout
 
     def tool_prompt(self, ctx: ToolContext | None = None) -> str:
         return tool_prompt
@@ -62,7 +69,7 @@ class SubAgent(BaseTool):
         assert provider is not None
         parent = ctx.core
         assert parent is not None
-        core = AgentCore(agent_id=id, path=parent.path + (parent.agent_id,))
+        core = AgentCore(agent_id=id, path=parent.path + (parent.agent_id,), tool_timeout=self._timeout)
 
         @core.on_chunk()
         async def forward_chunk(ev: AgentPayload[Chunk]):

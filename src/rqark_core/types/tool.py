@@ -28,6 +28,10 @@ class BaseTool(ABC):
     def display_key(self) -> str:
         return ''
 
+    @property
+    def timeout(self) -> float | None:
+        return None
+
     def tool_prompt(self, ctx: ToolContext | None = None) -> str | None:
         return None
 
