@@ -35,7 +35,16 @@ def _format_output(stdout: str, stderr: str, returncode: int) -> str:
 
 
 def _decode_output(data: bytes | str | None) -> str:
-    return data.decode('utf-8', errors='replace') if isinstance(data, bytes) else data or ''
+    if data is None or isinstance(data, str):
+        return (data or '').replace('\x00', '')
+    if data[:2] in (b'\xff\xfe', b'\xfe\xff'):
+        return data.decode('utf-16', errors='replace').replace('\x00', '')
+    if data.count(b'\x00') > len(data) // 4:
+        try:
+            return data.decode('utf-16-le')
+        except UnicodeDecodeError:
+            pass
+    return data.decode('utf-8', errors='replace').replace('\x00', '')
 
 
 def _build_env() -> dict[str, str]:
