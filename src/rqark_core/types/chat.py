@@ -1,3 +1,4 @@
+import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from typing import Literal, TypedDict
@@ -8,6 +9,9 @@ type ChunkType = Literal['reasoning_content', 'content', 'tool_calls', 'tool_res
 
 def _utc_now() -> datetime:
     return datetime.now(UTC)
+
+def _uuid4() -> str:
+    return str(uuid.uuid4())
 
 @dataclass
 class Usage:
@@ -58,6 +62,7 @@ class UserMessageDict(TypedDict):
     role: str
     content:list[dict]
     created_at: str
+    id: str
 
 @dataclass
 class UserMessage:
@@ -65,6 +70,7 @@ class UserMessage:
     role: Literal['user'] = 'user'
     created_at: datetime = field(default_factory=_utc_now)
     images: list[str] = field(default_factory=list)
+    id: str = field(default_factory=_uuid4)
 
     def to_dict(self) -> UserMessageDict:
         content: list[dict] = [ UserContent(self.content).to_dict() ]
@@ -74,6 +80,7 @@ class UserMessage:
             'role': self.role,
             'content': content,
             'created_at': self.created_at.isoformat(),
+            'id': self.id,
         }
 
 @dataclass
@@ -84,6 +91,7 @@ class ToolMessage:
     arguments: str | None = None
     role: Literal['tool'] = 'tool'
     created_at: datetime = field(default_factory=_utc_now)
+    id: str = field(default_factory=_uuid4)
 
     def to_dict(self) -> dict[str, str]:
         return {
@@ -91,6 +99,7 @@ class ToolMessage:
             'tool_call_id': self.tool_call_id,
             'content': self.content,
             'created_at': self.created_at.isoformat(),
+            'id': self.id,
         }
 
 @dataclass
@@ -101,12 +110,14 @@ class AssistantMessage:
     usage: Usage | None = None
     role: Literal['assistant'] = 'assistant'
     created_at: datetime = field(default_factory=_utc_now)
+    id: str = field(default_factory=_uuid4)
 
     def to_dict(self) -> dict:
         d: dict = {
             'role': self.role,
             'content': self.content,
             'created_at': self.created_at.isoformat(),
+            'id': self.id,
         }
         if self.tool_calls:
             d['tool_calls'] = [tc.to_dict() for tc in self.tool_calls]
@@ -119,12 +130,14 @@ class SystemMessage:
     content: str
     role: Literal['system'] = 'system'
     created_at: datetime = field(default_factory=_utc_now)
+    id: str = field(default_factory=_uuid4)
 
     def to_dict(self) -> dict[str, str]:
         return {
             'role': self.role,
             'content': self.content,
             'created_at': self.created_at.isoformat(),
+            'id': self.id,
         }
 
 type Message = UserMessage | ToolMessage | AssistantMessage | SystemMessage

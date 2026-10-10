@@ -81,6 +81,7 @@ class AgentCore(AgentCoreEventEmitter):
         d: dict[str, Any] = dict(m.to_dict())
         d.pop("created_at", None)
         d.pop("reasoning_content", None)
+        d.pop("id", None)
         return d
 
     async def _build_chat_params(self, provider: Provider, history: list[Message], tools: Sequence[BaseTool]):
