@@ -31,7 +31,7 @@ class Gitea(BaseGitTool):
             'issue_number': {'type': 'integer', 'description': 'Issue number'},
             'state': {'type': 'string', 'enum': ['open', 'closed', 'all'], 'description': 'Filter by state'},
             'title': {'type': 'string', 'description': 'Title for issue/PR/release'},
-            'body': {'type': 'string', 'description': 'Body text for issue/PR/comment/release notes'},
+            'body': {'type': 'string', 'description': 'Body text for issue/PR/comment'},
             'assignee': {'type': 'string', 'description': 'Username to assign'},
             'labels': {'type': 'array', 'items': {'type': 'integer'}, 'description': 'Label IDs (see list_labels; set_issue_labels also accepts names)'},
             'milestone': {'type': 'integer', 'description': 'Milestone ID (see list_milestones)'},
@@ -45,7 +45,7 @@ class Gitea(BaseGitTool):
             'release_id': {'type': 'integer', 'description': 'Release ID'},
             'tag': {'type': 'string', 'description': 'Tag name for the release'},
             'release_name': {'type': 'string', 'description': 'Release title'},
-            'notes': {'type': 'string', 'description': 'Release notes'},
+            'notes': {'type': 'string', 'description': 'Release notes (create_release, update_release)'},
             'draft': {'type': 'boolean', 'description': 'Whether release is a draft'},
             'prerelease': {'type': 'boolean', 'description': 'Whether release is a prerelease'},
             'attachments': {'type': 'array', 'items': {'type': 'string'}, 'description': 'File paths to attach'},
@@ -258,8 +258,9 @@ class Gitea(BaseGitTool):
         return self._fmt_release(data)
 
     def _create_release(self, p: dict[str, Any]) -> str:
-        repo, tag, name, notes, draft, prerelease, attachments = p.get('repo', ''), p.get('tag'), p.get('release_name'), p.get('notes'), p.get('draft'), p.get('prerelease'), p.get('attachments')
-        err = self._need(repo=repo, tag=tag)
+        repo, tag, name, draft, prerelease, attachments = p.get('repo', ''), p.get('tag'), p.get('release_name'), p.get('draft'), p.get('prerelease'), p.get('attachments')
+        notes, body_err, aliased = self._release_notes(p)
+        err = self._need(repo=repo, tag=tag) or body_err
         if err:
             return err
         payload: dict[str, Any] = {'tag_name': tag}
@@ -275,7 +276,7 @@ class Gitea(BaseGitTool):
         err2 = self._fmt_error(data)
         if err2:
             return err2
-        result = self._fmt_release(data)
+        result = self._with_body_note(self._fmt_release(data), aliased)
         if attachments:
             release_id = data.get('id')
             if release_id:
@@ -284,7 +285,8 @@ class Gitea(BaseGitTool):
 
     def _update_release(self, p: dict[str, Any]) -> str:
         repo, rid, tag = p.get('repo', ''), p.get('release_id'), p.get('tag')
-        err = self._need(repo=repo)
+        notes, body_err, aliased = self._release_notes(p)
+        err = self._need(repo=repo) or body_err
         if err:
             return err
         if not rid and not tag:
@@ -292,8 +294,8 @@ class Gitea(BaseGitTool):
         payload: dict[str, Any] = {}
         if p.get('release_name') is not None:
             payload['name'] = p['release_name']
-        if p.get('notes') is not None:
-            payload['body'] = p['notes']
+        if notes is not None:
+            payload['body'] = notes
         if p.get('draft') is not None:
             payload['draft'] = p['draft']
         if p.get('prerelease') is not None:
@@ -306,7 +308,7 @@ class Gitea(BaseGitTool):
             if err2:
                 return err2
             rid = rel['id']
-        return self._fmt_release(self._request('PATCH', f'/repos/{repo}/releases/{rid}', json=payload))
+        return self._with_body_note(self._fmt_release(self._request('PATCH', f'/repos/{repo}/releases/{rid}', json=payload)), aliased)
 
     def _delete_release(self, p: dict[str, Any]) -> str:
         repo, rid, tag = p.get('repo', ''), p.get('release_id'), p.get('tag')

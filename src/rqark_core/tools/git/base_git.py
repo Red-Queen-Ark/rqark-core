@@ -105,6 +105,19 @@ class BaseGitTool(BaseTool):
     def _fmt_error(self, data: Any) -> str | None:
         return f'Error: {data["error"]}' if isinstance(data, dict) and 'error' in data else None
 
+    def _release_notes(self, p: dict[str, Any]) -> tuple[Any, str | None, bool]:
+        notes, body = p.get('notes'), p.get('body')
+        if notes is not None and body is not None:
+            return None, 'Error: release notes go in notes; body is read by the issue, PR and comment actions only', False
+        if notes is None and body is not None:
+            return body, None, True
+        return notes, None, False
+
+    def _with_body_note(self, result: str, aliased: bool) -> str:
+        if not aliased:
+            return result
+        return f'{result}\n\nNote: read the release notes from body; releases take notes.'
+
     def _render_list(self, data: Any, title: str, fmt: Callable[[Any], str], empty: str) -> str:
         if not data or (isinstance(data[0], dict) and 'error' in data[0]):
             return empty if not data else f'Error: {data[0]["error"]}'
