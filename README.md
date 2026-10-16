@@ -43,7 +43,7 @@ uv add rqark-core
 | WriteFile | `write_file` | `path`、`content` | 寫檔案，自動建 parent 目錄 |
 | EditFile | `edit_file` | `path`、`old_string`、`new_string`、`replace_all` | 精確字串替換（同一檔案唔可以並行編輯） |
 | ListDir | `list_dir` | `path`（default 當前目錄） | 列出目錄內容，子目錄加 `/` 尾綴；跳過 `.git`、`node_modules`、`.venv`、`__pycache__` 等 |
-| Grep | `grep` | `pattern`、`path`、`include` | 搜尋檔案內容，輸出 `path:line: content`（max 200 匹配，檔案上限 1MB，跳過 `.git`/`.venv` 等） |
+| Grep | `grep` | `pattern`、`path`、`include`、`include_ignored` | 搜尋檔案內容，輸出 `path:line: content`（max 200 匹配，檔案上限 1MB，跳過 `.git`/`.venv` 等；目錄搜尋預設跟 `.gitignore`，`include_ignored=true` 可以連 ignored 檔都搜） |
 | Exec | `exec` | `command`、`working_dir`、`timeout`（max 300） | 執行 shell command（default 60s，command 上限 2000 chars，alias：`shell`） |
 | WebSearch | `web_search` | `query` | DuckDuckGo 搜尋（max 10 結果，黑名單 + 關鍵字過濾） |
 | WebFetch | `web_fetch` | `url` | 抓網頁變純文字（30s timeout，HTML 最多 200 行，帶信源評分） |
