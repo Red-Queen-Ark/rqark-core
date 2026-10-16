@@ -184,9 +184,12 @@ class BaseGitTool(BaseTool):
     def _repo_name(self, repo: dict[str, Any]) -> str:
         return repo.get('full_name', '?')
 
+    def _repo_suffix(self, repo: dict[str, Any]) -> str:
+        return ' [ARCHIVED]' if repo.get('archived') else ''
+
     def _list_repos(self, p: dict[str, Any]) -> str:
         data = self._paginate(self._repos_path(), params=self._repos_params(), limit=50)
-        return self._render_list(data, 'Repositories:', lambda r: f'{self._repo_name(r)}: {r.get("description") or "(no description)"}', 'No repositories found.')
+        return self._render_list(data, 'Repositories:', lambda r: f'{self._repo_name(r)}{self._repo_suffix(r)}: {r.get("description") or "(no description)"}', 'No repositories found.')
 
     def _list_issues(self, p: dict[str, Any]) -> str:
         repo = p.get('repo', '')
