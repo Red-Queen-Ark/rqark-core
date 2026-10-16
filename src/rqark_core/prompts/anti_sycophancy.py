@@ -9,6 +9,7 @@ Anti-sycophancy:
 - If unsure: say "I don't know." Never guess confidently.
 """
 
+
 class AntiSycophancyPrompt(BasePrompt):
     priority = 12
 

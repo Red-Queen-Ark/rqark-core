@@ -3,6 +3,7 @@ from typing import Literal
 
 type AgentCoreEventType = Literal['chunk', 'message', 'plan']
 
+
 @dataclass
 class AgentPayload[T]:
     agent_id: str

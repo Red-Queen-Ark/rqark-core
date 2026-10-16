@@ -24,20 +24,15 @@ class AgentCore(AgentCoreEventEmitter):
     """
     Getter
     """
+
     def _get_client(self, provider: Provider):
         ssl_context = ssl.create_default_context(cafile=certifi.where())
         http_client = httpx.AsyncClient(verify=ssl_context)
-        return AsyncOpenAI(
-            api_key=provider.api_key,
-            base_url=provider.api_base,
-            http_client=http_client,
-            default_headers={},
-            timeout=self.timeout,
-        )
+        return AsyncOpenAI(api_key=provider.api_key, base_url=provider.api_base, http_client=http_client, default_headers={}, timeout=self.timeout)
 
     def _get_system_prompts(self, prompts: Sequence[BasePrompt]):
         system_prompts = []
-        _prompts = sorted(prompts, key=lambda p:p.priority)
+        _prompts = sorted(prompts, key=lambda p: p.priority)
         for prompt in _prompts:
             if content := prompt.get_messages():
                 p = SystemMessage(content)
@@ -57,16 +52,11 @@ class AgentCore(AgentCoreEventEmitter):
     """
     History
     """
-    def _build_history(
-        self,
-        provider: Provider,
-        system_prompts: Sequence[Message],
-        tool_prompts: Sequence[Message],
-        messages: Sequence[Message],
-    ) -> tuple[list[Message], int]:
+
+    def _build_history(self, provider: Provider, system_prompts: Sequence[Message], tool_prompts: Sequence[Message], messages: Sequence[Message]) -> tuple[list[Message], int]:
         head = list(system_prompts) + list(tool_prompts)
         if provider.combine and head:
-            head = [SystemMessage("\n".join(m.content for m in head))]
+            head = [SystemMessage('\n'.join(m.content for m in head))]
         return head + list(messages), len(head)
 
     def _clean_history(self, history: list[Message]) -> list[Message]:
@@ -77,28 +67,22 @@ class AgentCore(AgentCoreEventEmitter):
     """
     Chat Loop
     """
+
     def _to_api_message(self, m: Message) -> dict[str, Any]:
         d: dict[str, Any] = dict(m.to_dict())
-        d.pop("created_at", None)
-        d.pop("reasoning_content", None)
-        d.pop("id", None)
+        d.pop('created_at', None)
+        d.pop('reasoning_content', None)
+        d.pop('id', None)
         return d
 
     async def _build_chat_params(self, provider: Provider, history: list[Message], tools: Sequence[BaseTool]):
-        params: dict[str, Any] = {
-            "model": provider.model_name,
-            "messages": [ self._to_api_message(m) for m in history ],
-            "stream": True,
-            "stream_options": {"include_usage": True},
-        }
+        params: dict[str, Any] = {'model': provider.model_name, 'messages': [self._to_api_message(m) for m in history], 'stream': True, 'stream_options': {'include_usage': True}}
         if tools:
-            params["tools"] = [t.get_openai_schema() for t in tools]
+            params['tools'] = [t.get_openai_schema() for t in tools]
         if provider.reasoning_effort:
-            params["reasoning_effort"] = provider.reasoning_effort
+            params['reasoning_effort'] = provider.reasoning_effort
         if thinking := provider.thinking:
-            params["extra_body"] = {
-                "chat_template_kwargs": {"enable_thinking": thinking == "enabled"},
-            }
+            params['extra_body'] = {'chat_template_kwargs': {'enable_thinking': thinking == 'enabled'}}
         return params
 
     async def _parse_stream(self, stream: AsyncStream) -> AssistantMessage:
@@ -108,13 +92,7 @@ class AgentCore(AgentCoreEventEmitter):
                 await handle_chunk.handle(chunk)
         return await handle_chunk.message()
 
-    async def chat(
-        self,
-        provider: Provider,
-        messages: Sequence[Message],
-        prompts: Sequence[BasePrompt] = [],
-        tools: Sequence[BaseTool] = [],
-    ) -> tuple[Sequence[Message], Exception | None]:
+    async def chat(self, provider: Provider, messages: Sequence[Message], prompts: Sequence[BasePrompt] = [], tools: Sequence[BaseTool] = []) -> tuple[Sequence[Message], Exception | None]:
         error: Exception | None = None
         tool_map = self._get_tool_map(tools)
         ctx = ToolContext(core=self, provider=provider)

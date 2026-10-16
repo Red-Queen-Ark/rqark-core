@@ -21,7 +21,33 @@ class GitLab(BaseGitTool):
         return 'gitlab'
 
     def _action_names(self) -> list[str]:
-        return ['list_repos', 'clone_repo', 'list_issues', 'list_prs', 'get_issue', 'create_issue', 'update_issue', 'add_comment', 'list_milestones', 'list_labels', 'list_branches', 'get_pull_request', 'create_pull_request', 'update_pull_request', 'merge_pull_request', 'close_pull_request', 'list_pull_request_comments', 'add_pull_request_comment', 'list_releases', 'get_release', 'create_release', 'update_release', 'delete_release', 'list_commits', 'compare']
+        return [
+            'list_repos',
+            'clone_repo',
+            'list_issues',
+            'list_prs',
+            'get_issue',
+            'create_issue',
+            'update_issue',
+            'add_comment',
+            'list_milestones',
+            'list_labels',
+            'list_branches',
+            'get_pull_request',
+            'create_pull_request',
+            'update_pull_request',
+            'merge_pull_request',
+            'close_pull_request',
+            'list_pull_request_comments',
+            'add_pull_request_comment',
+            'list_releases',
+            'get_release',
+            'create_release',
+            'update_release',
+            'delete_release',
+            'list_commits',
+            'compare',
+        ]
 
     def get_openai_schema(self) -> dict[str, Any]:
         props = {
@@ -244,7 +270,9 @@ class GitLab(BaseGitTool):
         if p.get('since'):
             params['since'] = p['since']
         data = self._paginate(f'/projects/{_pid(repo)}/repository/commits', params=params, limit=per_page)
-        return self._render_list(data, 'Commits:', lambda c: f'{c.get("short_id", "?")} | {(c.get("committed_date") or "?")[:10]} | {c.get("author_name", "unknown")} | {c.get("title", c.get("message", "(no message)"))[:80]}', 'No commits found.')
+        return self._render_list(
+            data, 'Commits:', lambda c: f'{c.get("short_id", "?")} | {(c.get("committed_date") or "?")[:10]} | {c.get("author_name", "unknown")} | {c.get("title", c.get("message", "(no message)"))[:80]}', 'No commits found.'
+        )
 
     def _compare(self, p: dict[str, Any]) -> str:
         repo, frm, to = p.get('repo', ''), p.get('from_ref'), p.get('to_ref')
@@ -279,7 +307,15 @@ class GitLab(BaseGitTool):
         if isinstance(data, dict) and 'error' in data:
             return f'Error: {data["error"]}'
         author_name = data.get('author', {}).get('name', 'unknown') if isinstance(data.get('author'), dict) else 'unknown'
-        lines = [f'MR !{data["iid"]}: {data["title"]}', f'State: {data["state"]}', f'Author: {author_name}', f'Branch: {data["source_branch"]} -> {data["target_branch"]}', f'Created: {data["created_at"]}', '', data.get('description') or '(no description)']
+        lines = [
+            f'MR !{data["iid"]}: {data["title"]}',
+            f'State: {data["state"]}',
+            f'Author: {author_name}',
+            f'Branch: {data["source_branch"]} -> {data["target_branch"]}',
+            f'Created: {data["created_at"]}',
+            '',
+            data.get('description') or '(no description)',
+        ]
         if data.get('merge_status'):
             lines.append(f'Merge Status: {data["merge_status"]}')
         return '\n'.join(lines)

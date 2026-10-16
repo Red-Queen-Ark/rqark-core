@@ -3,10 +3,11 @@ from collections import defaultdict
 from collections.abc import Awaitable, Callable
 from typing import Any, TypeVar
 
-T = TypeVar("T")
-E = TypeVar("E", bound=str)
+T = TypeVar('T')
+E = TypeVar('E', bound=str)
 
 type EventFunction[T] = Callable[[T], Awaitable[None]]
+
 
 class BaseEventEmitter[E]:
     def __init__(self) -> None:
@@ -16,6 +17,7 @@ class BaseEventEmitter[E]:
         def decorator(f: EventFunction[T]) -> EventFunction[T]:
             self._listeners[event_type].append(f)
             return f
+
         return decorator
 
     async def _emit(self, event_type: E, payload: object) -> None:

@@ -23,7 +23,36 @@ class Gitea(BaseGitTool):
         return 'gitea'
 
     def _action_names(self) -> list[str]:
-        return ['list_repos', 'clone_repo', 'list_issues', 'list_prs', 'get_issue', 'create_issue', 'update_issue', 'add_comment', 'set_issue_labels', 'list_milestones', 'list_labels', 'list_branches', 'create_branch', 'delete_branch', 'list_commits', 'compare', 'get_pull_request', 'create_pull_request', 'update_pull_request', 'merge_pull_request', 'close_pull_request', 'list_pull_request_comments', 'add_pull_request_comment', 'list_releases', 'get_release', 'create_release', 'update_release', 'delete_release']
+        return [
+            'list_repos',
+            'clone_repo',
+            'list_issues',
+            'list_prs',
+            'get_issue',
+            'create_issue',
+            'update_issue',
+            'add_comment',
+            'set_issue_labels',
+            'list_milestones',
+            'list_labels',
+            'list_branches',
+            'create_branch',
+            'delete_branch',
+            'list_commits',
+            'compare',
+            'get_pull_request',
+            'create_pull_request',
+            'update_pull_request',
+            'merge_pull_request',
+            'close_pull_request',
+            'list_pull_request_comments',
+            'add_pull_request_comment',
+            'list_releases',
+            'get_release',
+            'create_release',
+            'update_release',
+            'delete_release',
+        ]
 
     def get_openai_schema(self) -> dict[str, Any]:
         props = {
@@ -341,7 +370,14 @@ class Gitea(BaseGitTool):
     def _fmt_issue(self, data: Any) -> str:
         if isinstance(data, dict) and 'error' in data:
             return f'Error: {data["error"]}'
-        lines = [f'Issue #{data.get("number", "?")}: {data.get("title", "")}', f'State: {data.get("state", "unknown")}', f'Author: {data.get("user", {}).get("login", "unknown")}', f'Created: {data.get("created_at", "unknown")}', '', data.get('body', '(no description)') or '(no description)']
+        lines = [
+            f'Issue #{data.get("number", "?")}: {data.get("title", "")}',
+            f'State: {data.get("state", "unknown")}',
+            f'Author: {data.get("user", {}).get("login", "unknown")}',
+            f'Created: {data.get("created_at", "unknown")}',
+            '',
+            data.get('body', '(no description)') or '(no description)',
+        ]
         assignees = data.get('assignees') or []
         if assignees:
             lines.append(f'Assignees: {", ".join(a.get("login", "") for a in assignees)}')
@@ -357,7 +393,15 @@ class Gitea(BaseGitTool):
     def _fmt_pr(self, data: Any) -> str:
         if isinstance(data, dict) and 'error' in data:
             return f'Error: {data["error"]}'
-        lines = [f'PR #{data.get("number", "?")}: {data.get("title", "")}', f'State: {data.get("state", "unknown")}{" [DRAFT]" if data.get("draft") else ""}', f'Author: {data.get("user", {}).get("login", "unknown")}', f'Branch: {data.get("head", {}).get("ref", "?")} -> {data.get("base", {}).get("ref", "?")}', f'Created: {data.get("created_at", "unknown")}', '', data.get('body', '(no description)') or '(no description)']
+        lines = [
+            f'PR #{data.get("number", "?")}: {data.get("title", "")}',
+            f'State: {data.get("state", "unknown")}{" [DRAFT]" if data.get("draft") else ""}',
+            f'Author: {data.get("user", {}).get("login", "unknown")}',
+            f'Branch: {data.get("head", {}).get("ref", "?")} -> {data.get("base", {}).get("ref", "?")}',
+            f'Created: {data.get("created_at", "unknown")}',
+            '',
+            data.get('body', '(no description)') or '(no description)',
+        ]
         assignees = data.get('assignees') or []
         if assignees:
             lines.append(f'Assignees: {", ".join(a.get("login", "") for a in assignees)}')
@@ -379,7 +423,15 @@ class Gitea(BaseGitTool):
             return f'Error: {data["error"]}'
         draft = ' [DRAFT]' if data.get('draft') else ''
         prerelease = ' [PRE]' if data.get('prerelease') else ''
-        lines = [f'Release: {data.get("tag_name", "?")}{draft}{prerelease}', f'Title: {data.get("name") or "(untitled)"}', f'Author: {data.get("author", {}).get("login", "unknown")}', f'Created: {data.get("created_at", "unknown")}', f'Published: {data.get("published_at", "unknown")}', '', data.get('body', '(no release notes)') or '(no release notes)']
+        lines = [
+            f'Release: {data.get("tag_name", "?")}{draft}{prerelease}',
+            f'Title: {data.get("name") or "(untitled)"}',
+            f'Author: {data.get("author", {}).get("login", "unknown")}',
+            f'Created: {data.get("created_at", "unknown")}',
+            f'Published: {data.get("published_at", "unknown")}',
+            '',
+            data.get('body', '(no release notes)') or '(no release notes)',
+        ]
         assets = data.get('assets') or []
         if assets:
             lines.append(f'Attachments ({len(assets)}):')

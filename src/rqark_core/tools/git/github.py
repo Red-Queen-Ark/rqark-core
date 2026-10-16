@@ -19,7 +19,31 @@ class GitHub(BaseGitTool):
         return 'github'
 
     def _action_names(self) -> list[str]:
-        return ['list_repos', 'clone_repo', 'list_issues', 'list_prs', 'get_issue', 'create_issue', 'update_issue', 'add_comment', 'list_milestones', 'list_labels', 'list_branches', 'get_pull_request', 'create_pull_request', 'update_pull_request', 'merge_pull_request', 'close_pull_request', 'list_pull_request_comments', 'add_pull_request_comment', 'list_releases', 'get_release', 'create_release', 'update_release', 'delete_release']
+        return [
+            'list_repos',
+            'clone_repo',
+            'list_issues',
+            'list_prs',
+            'get_issue',
+            'create_issue',
+            'update_issue',
+            'add_comment',
+            'list_milestones',
+            'list_labels',
+            'list_branches',
+            'get_pull_request',
+            'create_pull_request',
+            'update_pull_request',
+            'merge_pull_request',
+            'close_pull_request',
+            'list_pull_request_comments',
+            'add_pull_request_comment',
+            'list_releases',
+            'get_release',
+            'create_release',
+            'update_release',
+            'delete_release',
+        ]
 
     def get_openai_schema(self) -> dict[str, Any]:
         props = {
@@ -215,7 +239,9 @@ class GitHub(BaseGitTool):
             try:
                 with open(path, 'rb') as f:
                     endpoint = upload_url.replace('{?name,label}', '')
-                    resp = httpx.post(endpoint, headers={'Authorization': f'Bearer {self._access_token}', 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/octet-stream'}, params={'name': path.name}, content=f.read(), timeout=60)
+                    resp = httpx.post(
+                        endpoint, headers={'Authorization': f'Bearer {self._access_token}', 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/octet-stream'}, params={'name': path.name}, content=f.read(), timeout=60
+                    )
                     results.append(f'  - {filepath}: uploaded OK' if resp.status_code == 201 else f'  - {filepath}: upload failed (HTTP {resp.status_code})')
             except Exception as e:
                 results.append(f'  - {filepath}: upload error - {e}')
@@ -226,7 +252,14 @@ class GitHub(BaseGitTool):
             return f'Error: {data["error"]}'
         labels = ', '.join(lb.get('name', '') for lb in data.get('labels', [])) if data.get('labels') else ''
         assignees = ', '.join(a.get('login', '') for a in data.get('assignees', [])) if data.get('assignees') else ''
-        lines = [f'Issue #{data.get("number", "?")}: {data.get("title", "")}', f'State: {data.get("state", "unknown")}', f'Author: {data.get("user", {}).get("login", "unknown")}', f'Created: {data.get("created_at", "")}', '', data.get('body') or '(no description)']
+        lines = [
+            f'Issue #{data.get("number", "?")}: {data.get("title", "")}',
+            f'State: {data.get("state", "unknown")}',
+            f'Author: {data.get("user", {}).get("login", "unknown")}',
+            f'Created: {data.get("created_at", "")}',
+            '',
+            data.get('body') or '(no description)',
+        ]
         if assignees:
             lines.append(f'Assignees: {assignees}')
         if labels:
@@ -237,7 +270,15 @@ class GitHub(BaseGitTool):
         if isinstance(data, dict) and 'error' in data:
             return f'Error: {data["error"]}'
         assignees = ', '.join(a.get('login', '') for a in data.get('assignees', [])) if data.get('assignees') else ''
-        lines = [f'PR #{data.get("number", "?")}: {data.get("title", "")}', f'State: {data.get("state", "unknown")}', f'Author: {data.get("user", {}).get("login", "unknown")}', f'Branch: {data.get("head", {}).get("ref", "?")} -> {data.get("base", {}).get("ref", "?")}', f'Created: {data.get("created_at", "")}', '', data.get('body') or '(no description)']
+        lines = [
+            f'PR #{data.get("number", "?")}: {data.get("title", "")}',
+            f'State: {data.get("state", "unknown")}',
+            f'Author: {data.get("user", {}).get("login", "unknown")}',
+            f'Branch: {data.get("head", {}).get("ref", "?")} -> {data.get("base", {}).get("ref", "?")}',
+            f'Created: {data.get("created_at", "")}',
+            '',
+            data.get('body') or '(no description)',
+        ]
         if assignees:
             lines.append(f'Assignees: {assignees}')
         if data.get('merged'):
@@ -249,7 +290,15 @@ class GitHub(BaseGitTool):
             return f'Error: {data["error"]}'
         draft = ' [DRAFT]' if data.get('draft') else ''
         prerelease = ' [PRE]' if data.get('prerelease') else ''
-        lines = [f'Release: {data.get("tag_name", "?")}{draft}{prerelease}', f'Title: {data.get("name") or "(untitled)"}', f'Author: {data.get("author", {}).get("login", "unknown")}', f'Created: {data.get("created_at", "")}', f'Published: {data.get("published_at", "")}', '', data.get('body') or '(no release notes)']
+        lines = [
+            f'Release: {data.get("tag_name", "?")}{draft}{prerelease}',
+            f'Title: {data.get("name") or "(untitled)"}',
+            f'Author: {data.get("author", {}).get("login", "unknown")}',
+            f'Created: {data.get("created_at", "")}',
+            f'Published: {data.get("published_at", "")}',
+            '',
+            data.get('body') or '(no release notes)',
+        ]
         assets = data.get('assets', [])
         if assets:
             lines.append(f'Attachments ({len(assets)}):')

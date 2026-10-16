@@ -7,6 +7,7 @@ from rqark_core.types.provider import Provider
 if TYPE_CHECKING:
     from rqark_core.core import AgentCore
 
+
 @dataclass(frozen=True)
 class ToolContext:
     core: 'AgentCore | None' = None
@@ -50,6 +51,7 @@ class BaseTool(ABC):
 
 type PlanStatus = Literal['pending', 'in_progress', 'completed', 'cancelled']
 ICONS_MAP: dict[PlanStatus, str] = {'pending': ' ', 'in_progress': '>', 'completed': 'x', 'cancelled': '-'}
+
 
 @dataclass
 class PlanItem:

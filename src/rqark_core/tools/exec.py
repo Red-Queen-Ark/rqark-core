@@ -61,12 +61,9 @@ def _spawn_kwargs(stdin: Any = subprocess.DEVNULL) -> dict[str, Any]:
 async def _kill_proc(proc: asyncio.subprocess.Process) -> None:
     if sys.platform == 'win32' and proc.pid:
         try:
-            killer = await asyncio.create_subprocess_exec(
-                'taskkill', '/F', '/T', '/PID', str(proc.pid),
-                stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL,
-            )
+            killer = await asyncio.create_subprocess_exec('taskkill', '/F', '/T', '/PID', str(proc.pid), stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
             await asyncio.wait_for(killer.wait(), timeout=5)
-        except (OSError, asyncio.TimeoutError, ProcessLookupError):
+        except OSError, asyncio.TimeoutError, ProcessLookupError:
             pass
     try:
         proc.kill()
@@ -74,7 +71,7 @@ async def _kill_proc(proc: asyncio.subprocess.Process) -> None:
         pass
     try:
         await asyncio.wait_for(proc.wait(), timeout=5)
-    except (asyncio.TimeoutError, ProcessLookupError):
+    except asyncio.TimeoutError, ProcessLookupError:
         pass
 
 

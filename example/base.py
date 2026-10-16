@@ -11,6 +11,8 @@ provider = Provider(MODEL_NAME, 'api_key', 'http://127.0.0.1:8080', 0, combine=T
 core = AgentCore(agent_id='root')
 
 last_chunk_type = Chunk('reasoning_content', '')
+
+
 @core.on_chunk()
 async def print_chunk(ev: AgentPayload[Chunk]):
     global last_chunk_type
@@ -30,13 +32,16 @@ async def print_chunk(ev: AgentPayload[Chunk]):
         print(f'[error] {chunk.content}')
     last_chunk_type = chunk
 
+
 @core.on_message()
 async def print_message(ev: AgentPayload[Message]):
     print(f'[message] {type(ev.payload).__name__}')
 
+
 async def main() -> None:
-    messages = [ UserMessage('你好') ]
+    messages = [UserMessage('你好')]
     new_messages, error = await core.chat(provider=provider, messages=messages)
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     asyncio.run(main())

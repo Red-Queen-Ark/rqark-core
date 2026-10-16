@@ -110,12 +110,15 @@ prompts = [RolePrompt(), DateTimePrompt(), PlatformPrompt()]
 tools = [WebSearch(), WebFetch(), ReadFile(), WriteFile()]
 tools = tools + [SubAgent(prompts, tools), PlanUpdate()]
 
+
 @core.on_chunk()
 async def on_chunk(chunk):
     print(chunk.type, chunk.content)
 
+
 async def main():
     history, error = await core.chat(provider, [UserMessage('今日天氣')], prompts, tools)
+
 
 asyncio.run(main())
 ```

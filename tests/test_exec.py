@@ -8,19 +8,7 @@ _UTF16LE_WSL_STYLE = '  NAME            STATE           VERSION\n'.encode('utf-1
 _UTF16_BOM = b'\xff\xfe' + '  NAME'.encode('utf-16-le')
 
 
-@pytest.mark.parametrize(
-    'data',
-    [
-        _UTF16LE_WSL_STYLE,
-        _UTF16_BOM,
-        b'\x00abc',
-        b'abc\x00',
-        b'\x00\x00\x00\x00\xff',
-        b'\xff\xfe\x41',
-        'str\x00input',
-        None,
-    ],
-)
+@pytest.mark.parametrize('data', [_UTF16LE_WSL_STYLE, _UTF16_BOM, b'\x00abc', b'abc\x00', b'\x00\x00\x00\x00\xff', b'\xff\xfe\x41', 'str\x00input', None])
 def test_nul_never_survives_decoding(data):
     assert '\x00' not in _decode_output(data)
 

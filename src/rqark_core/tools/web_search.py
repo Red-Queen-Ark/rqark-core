@@ -7,6 +7,7 @@ from rqark_core.types.tool import BaseTool, ToolContext
 DDGS: Any = None
 try:
     from ddgs import DDGS as _DDGS
+
     DDGS = _DDGS
 except ImportError:
     pass

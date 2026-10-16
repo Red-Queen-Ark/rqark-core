@@ -11,16 +11,9 @@ from rqark_core.types.provider import Provider
 
 provider = Provider(MODEL_NAME, 'api_key', 'http://127.0.0.1:8080', 0, combine=True)
 
-prompts = [
-    DateTimePrompt(),
-    RolePrompt(),
-    PlatformPrompt(),
-]
+prompts = [DateTimePrompt(), RolePrompt(), PlatformPrompt()]
 
-tools = [
-    WebSearch(),
-    WebFetch(),
-]
+tools = [WebSearch(), WebFetch()]
 
 core = AgentCore(agent_id='root')
 
@@ -45,13 +38,16 @@ last_chunk_type = Chunk('reasoning_content', '')
 #         print(f'[error] {chunk.content}')
 #     last_chunk_type = chunk
 
+
 @core.on_message()
 async def print_message(ev: AgentPayload[Message]):
     print(f'[message] {type(ev.payload).__name__} {ev.payload.content}')
 
+
 async def main() -> None:
-    messages = [ UserMessage('今日香港温度') ]
+    messages = [UserMessage('今日香港温度')]
     new_messages, error = await core.chat(provider=provider, messages=messages, prompts=prompts, tools=tools)
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     asyncio.run(main())

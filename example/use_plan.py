@@ -12,19 +12,23 @@ from rqark_core.types.tool import PlanItem
 provider = Provider(MODEL_NAME, 'api_key', 'http://127.0.0.1:8080', 0, combine=True)
 core = AgentCore(agent_id='root')
 
-tools = [ PlanUpdate() ]
+tools = [PlanUpdate()]
+
 
 @core.on_message()
 async def print_msg(ev: AgentPayload[Message]):
     print(ev.payload.role, ev.payload.content)
 
+
 @core.on_plan()
 async def print_plan(ev: AgentPayload[list[PlanItem]]):
     print(ev.payload)
 
+
 async def main() -> None:
-    messages = [ UserMessage('利用 plan_update 生成三個 items, 測試 1, 測試 2, 測試 3, 逐一切換狀態, 最後清空plan') ]
+    messages = [UserMessage('利用 plan_update 生成三個 items, 測試 1, 測試 2, 測試 3, 逐一切換狀態, 最後清空plan')]
     new_messages, error = await core.chat(provider=provider, messages=messages, tools=tools)
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     asyncio.run(main())

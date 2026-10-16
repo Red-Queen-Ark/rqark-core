@@ -10,8 +10,10 @@ type ChunkType = Literal['reasoning_content', 'content', 'tool_calls', 'tool_res
 def _utc_now() -> datetime:
     return datetime.now(UTC)
 
+
 def _uuid4() -> str:
     return str(uuid.uuid4())
+
 
 @dataclass
 class Usage:
@@ -22,6 +24,7 @@ class Usage:
     def to_dict(self) -> dict[str, int]:
         return asdict(self)
 
+
 @dataclass
 class ToolCall:
     id: str
@@ -30,11 +33,8 @@ class ToolCall:
     arguments: str
 
     def to_dict(self) -> dict:
-        return {
-            "id": self.id,
-            "type": self.type,
-            "function": {"name": self.name, "arguments": self.arguments},
-        }
+        return {'id': self.id, 'type': self.type, 'function': {'name': self.name, 'arguments': self.arguments}}
+
 
 @dataclass
 class UserContent:
@@ -42,10 +42,8 @@ class UserContent:
     type: Literal['text'] = 'text'
 
     def to_dict(self) -> dict[str, str]:
-        return {
-            "type": self.type,
-            "text": self.content,
-        }
+        return {'type': self.type, 'text': self.content}
+
 
 @dataclass
 class UserImageContent:
@@ -53,16 +51,15 @@ class UserImageContent:
     type: Literal['image_url'] = 'image_url'
 
     def to_dict(self) -> dict:
-        return {
-            "type": self.type,
-            "image_url": {"url": self.url },
-        }
+        return {'type': self.type, 'image_url': {'url': self.url}}
+
 
 class UserMessageDict(TypedDict):
     role: str
-    content:list[dict]
+    content: list[dict]
     created_at: str
     id: str
+
 
 @dataclass
 class UserMessage:
@@ -73,15 +70,11 @@ class UserMessage:
     id: str = field(default_factory=_uuid4)
 
     def to_dict(self) -> UserMessageDict:
-        content: list[dict] = [ UserContent(self.content).to_dict() ]
+        content: list[dict] = [UserContent(self.content).to_dict()]
         for img in self.images:
-            content.append( UserImageContent(img).to_dict() )
-        return {
-            'role': self.role,
-            'content': content,
-            'created_at': self.created_at.isoformat(),
-            'id': self.id,
-        }
+            content.append(UserImageContent(img).to_dict())
+        return {'role': self.role, 'content': content, 'created_at': self.created_at.isoformat(), 'id': self.id}
+
 
 @dataclass
 class ToolMessage:
@@ -94,13 +87,8 @@ class ToolMessage:
     id: str = field(default_factory=_uuid4)
 
     def to_dict(self) -> dict[str, str]:
-        return {
-            'role': self.role,
-            'tool_call_id': self.tool_call_id,
-            'content': self.content,
-            'created_at': self.created_at.isoformat(),
-            'id': self.id,
-        }
+        return {'role': self.role, 'tool_call_id': self.tool_call_id, 'content': self.content, 'created_at': self.created_at.isoformat(), 'id': self.id}
+
 
 @dataclass
 class AssistantMessage:
@@ -113,17 +101,13 @@ class AssistantMessage:
     id: str = field(default_factory=_uuid4)
 
     def to_dict(self) -> dict:
-        d: dict = {
-            'role': self.role,
-            'content': self.content,
-            'created_at': self.created_at.isoformat(),
-            'id': self.id,
-        }
+        d: dict = {'role': self.role, 'content': self.content, 'created_at': self.created_at.isoformat(), 'id': self.id}
         if self.tool_calls:
             d['tool_calls'] = [tc.to_dict() for tc in self.tool_calls]
         if self.reasoning_content:
             d['reasoning_content'] = self.reasoning_content
         return d
+
 
 @dataclass
 class SystemMessage:
@@ -133,14 +117,11 @@ class SystemMessage:
     id: str = field(default_factory=_uuid4)
 
     def to_dict(self) -> dict[str, str]:
-        return {
-            'role': self.role,
-            'content': self.content,
-            'created_at': self.created_at.isoformat(),
-            'id': self.id,
-        }
+        return {'role': self.role, 'content': self.content, 'created_at': self.created_at.isoformat(), 'id': self.id}
+
 
 type Message = UserMessage | ToolMessage | AssistantMessage | SystemMessage
+
 
 @dataclass
 class Chunk:
@@ -150,10 +131,7 @@ class Chunk:
     def to_dict(self):
         content = self.content
         if isinstance(content, list):
-            content = [ c.to_dict() for c in content ]
+            content = [c.to_dict() for c in content]
         elif isinstance(content, (Usage, ToolMessage)):
             content = content.to_dict()
-        return {
-            'type': self.type,
-            'content': content
-        }
+        return {'type': self.type, 'content': content}

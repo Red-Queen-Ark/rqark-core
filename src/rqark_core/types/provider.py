@@ -31,11 +31,13 @@ _CONTEXT_WINDOWS: list[tuple[re.Pattern[str], int]] = [
     (re.compile(r'^gpt-3'), 16_385),
 ]
 
+
 def resolve_context_window(model_name: str) -> int:
     for pattern, ctx in _CONTEXT_WINDOWS:
         if pattern.match(model_name):
             return ctx
     return DEFAULT_CONTEXT_WINDOW
+
 
 @dataclass
 class Provider:

@@ -129,7 +129,9 @@ class EditFile(BaseTool):
             'type': 'function',
             'function': {
                 'name': self.name,
-                'description': ('Perform exact string replacements in a file. When editing text, ensure you preserve the exact indentation (tabs/spaces) as it appears before. Use replace_all to change every instance. Never run two edits on the same file in parallel — they race and one edit is lost.'),
+                'description': (
+                    'Perform exact string replacements in a file. When editing text, ensure you preserve the exact indentation (tabs/spaces) as it appears before. Use replace_all to change every instance. Never run two edits on the same file in parallel — they race and one edit is lost.'
+                ),
                 'parameters': {
                     'type': 'object',
                     'properties': {
@@ -159,4 +161,5 @@ class EditFile(BaseTool):
         def _edit() -> str:
             with _path_lock(path):
                 return _edit_file_content(Path(path), old_string, new_string, replace_all)
+
         return await asyncio.to_thread(_edit)

@@ -1,4 +1,3 @@
-
 import pytest
 
 from rqark_core.libs.gitignore import GitIgnore

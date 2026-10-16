@@ -12,39 +12,24 @@ from rqark_core.types.provider import Provider
 
 provider = Provider(MODEL_NAME, 'api_key', 'http://127.0.0.1:8080', 0, combine=True)
 
-parent_prompts = [
-    DateTimePrompt(),
-    RolePrompt(),
-    PlatformPrompt(),
-]
+parent_prompts = [DateTimePrompt(), RolePrompt(), PlatformPrompt()]
 
-subagent_prompts = [
-    DateTimePrompt(),
-    SubAgentPrompt(),
-]
+subagent_prompts = [DateTimePrompt(), SubAgentPrompt()]
 
-subagent_tools = [
-    WebSearch(),
-    WebFetch(),
-    ReadFile(),
-    Grep(),
-    ListDir(),
-]
+subagent_tools = [WebSearch(), WebFetch(), ReadFile(), Grep(), ListDir()]
 
 core = AgentCore(agent_id='root')
 
 subagent = SubAgent(subagent_prompts, subagent_tools)
 
-tools = [
-    subagent,
-    WebSearch(),
-    WebFetch(),
-]
+tools = [subagent, WebSearch(), WebFetch()]
 
 last_chunk_type = Chunk('reasoning_content', '')
 
+
 def _sub_tag(ev: AgentPayload) -> str:
     return '/'.join(p[:8] for p in (*ev.path, ev.agent_id)) if ev.path else ''
+
 
 @core.on_chunk()
 async def print_chunk(ev: AgentPayload[Chunk]):
@@ -66,14 +51,17 @@ async def print_chunk(ev: AgentPayload[Chunk]):
         print(f'{prefix}[error] {chunk.content}')
     last_chunk_type = chunk
 
+
 @core.on_message()
 async def print_message(ev: AgentPayload[Message]):
     prefix = f'[sub {_sub_tag(ev)}] ' if _sub_tag(ev) else ''
     print(f'{prefix}[message] {type(ev.payload).__name__}')
 
+
 async def main() -> None:
-    messages = [ UserMessage('用 subagent 幫我搜尋今日香港氣温') ]
+    messages = [UserMessage('用 subagent 幫我搜尋今日香港氣温')]
     new_messages, error = await core.chat(provider=provider, messages=messages, prompts=parent_prompts, tools=tools)
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     asyncio.run(main())

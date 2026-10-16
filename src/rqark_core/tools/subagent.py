@@ -20,6 +20,7 @@ Only keep it in main context if it is a single, trivial read (e.g. reading one k
 You can also use multiple subagents in parallel when handling independent research tasks.
 """
 
+
 class SubAgent(BaseTool):
     DEFAULT_TIMEOUT = 600
 
@@ -51,9 +52,7 @@ class SubAgent(BaseTool):
                 'description': 'Delegate an investigation or research task to an isolated subagent with its own context. The subagent runs independently, streams progress in real-time, and returns only the final result. Use this aggressively for multi-step research, exploring code, or any task that would clutter your main context.',
                 'parameters': {
                     'type': 'object',
-                    'properties': {
-                        'prompt': {'type': 'string', 'description': 'The task for the subagent. Be specific: what to investigate, what tools to use, what format the answer should be.'},
-                    },
+                    'properties': {'prompt': {'type': 'string', 'description': 'The task for the subagent. Be specific: what to investigate, what tools to use, what format the answer should be.'}},
                     'required': ['prompt'],
                 },
             },
@@ -83,7 +82,7 @@ class SubAgent(BaseTool):
         async def forward_plan(ev: AgentPayload[list[PlanItem]]):
             await parent._emit('plan', ev)
 
-        messages = [ UserMessage(prompt) ]
+        messages = [UserMessage(prompt)]
         new_messages, error = await core.chat(provider=provider, messages=messages, prompts=self.prompts, tools=self.tools)
         if error:
             return str(error)

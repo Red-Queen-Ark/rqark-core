@@ -103,7 +103,7 @@ class Grep(BaseTool):
     def _search_file(self, file: Path, regex: re.Pattern[str]) -> list[str]:
         try:
             text = file.read_text(encoding='utf-8')
-        except (UnicodeDecodeError, OSError):
+        except UnicodeDecodeError, OSError:
             return []
         results: list[str] = []
         for lineno, line in enumerate(text.splitlines(), 1):

@@ -102,7 +102,7 @@ def _parse_line(line: str, base: str) -> _Rule | None:
 def _read_rules(gitignore: Path, base: str) -> list[_Rule]:
     try:
         text = gitignore.read_text(encoding='utf-8')
-    except (OSError, UnicodeDecodeError):
+    except OSError, UnicodeDecodeError:
         return []
     rules: list[_Rule] = []
     for line in text.splitlines():

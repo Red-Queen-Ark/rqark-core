@@ -6,7 +6,6 @@ from rqark_core.types.tool import BaseTool, ToolContext
 
 
 class WriteFile(BaseTool):
-
     @property
     def name(self) -> str:
         return 'write_file'

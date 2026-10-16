@@ -41,6 +41,7 @@ You have access to a `plan_update` tool for tracking explicitly requested work. 
 - Stop working and report results once all planned items are completed
 """
 
+
 class PlanUpdate(BaseTool):
     def __init__(self):
         self.valid_statuses: tuple[PlanStatus, ...] = ('pending', 'in_progress', 'completed', 'cancelled')
@@ -77,11 +78,7 @@ class PlanUpdate(BaseTool):
         for d in raw_items:
             status_raw = str(d.get('status', 'pending'))
             status = status_raw if status_raw in self.valid_statuses else 'pending'
-            plan_items.append(PlanItem(
-                id=str(d.get('id', '')),
-                content=str(d.get('content', '')),
-                status=status,
-            ))
+            plan_items.append(PlanItem(id=str(d.get('id', '')), content=str(d.get('content', '')), status=status))
         in_progress_count = 0
         for item in plan_items:
             if item.status == 'in_progress':

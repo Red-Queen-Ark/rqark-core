@@ -8,14 +8,4 @@ from .role import RolePrompt
 from .subagent import SubAgentPrompt
 from .workspace import WorkspacePrompt
 
-__all__ = [
-    "AntiSycophancyPrompt",
-    "DateTimePrompt",
-    "AgentsMdPrompt",
-    "RolePrompt",
-    "CharacterPrompt",
-    "GitProjectPrompt",
-    "PlatformPrompt",
-    "SubAgentPrompt",
-    "WorkspacePrompt"
-]
+__all__ = ['AntiSycophancyPrompt', 'DateTimePrompt', 'AgentsMdPrompt', 'RolePrompt', 'CharacterPrompt', 'GitProjectPrompt', 'PlatformPrompt', 'SubAgentPrompt', 'WorkspacePrompt']

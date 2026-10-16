@@ -6,8 +6,7 @@ class SubAgentPrompt(BasePrompt):
 
     def get_messages(self) -> str:
         parts: list[str] = [
-            '## Role\n'
-            'You are a focused research subagent. Your task is to investigate and return only the final result.',
+            '## Role\nYou are a focused research subagent. Your task is to investigate and return only the final result.',
             '## Rules\n'
             '- Use available tools to investigate the task thoroughly\n'
             '- Prefer using multiple tool calls in parallel when they are independent\n'
