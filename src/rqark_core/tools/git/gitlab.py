@@ -29,7 +29,7 @@ class GitLab(BaseGitTool):
             'issue_number': {'type': 'integer', 'description': 'Issue IID'},
             'state': {'type': 'string', 'enum': ['open', 'closed', 'all'], 'description': 'Filter by state'},
             'title': {'type': 'string', 'description': 'Title for issue/MR/release'},
-            'body': {'type': 'string', 'description': 'Body text for issue/MR/comment/release notes'},
+            'body': {'type': 'string', 'description': 'Body text for issue/MR/comment'},
             'assignee': {'type': 'string', 'description': 'Username to assign'},
             'pr_number': {'type': 'integer', 'description': 'Merge request IID'},
             'head': {'type': 'string', 'description': 'Source branch for MR'},
@@ -37,7 +37,7 @@ class GitLab(BaseGitTool):
             'delete_branch': {'type': 'boolean', 'description': 'Delete source branch after merge'},
             'tag': {'type': 'string', 'description': 'Tag name for the release'},
             'release_name': {'type': 'string', 'description': 'Release title'},
-            'notes': {'type': 'string', 'description': 'Release notes'},
+            'notes': {'type': 'string', 'description': 'Release notes (create_release, update_release)'},
             'per_page': {'type': 'integer', 'description': 'Number of commits to list (max 100)'},
             'ref_name': {'type': 'string', 'description': 'Branch or tag to list commits from'},
             'since': {'type': 'string', 'description': 'Only commits after this ISO 8601 date'},
@@ -200,27 +200,29 @@ class GitLab(BaseGitTool):
         return self._fmt_release(self._request('GET', f'/projects/{_pid(repo)}/releases/{tag}'))
 
     def _create_release(self, p: dict[str, Any]) -> str:
-        repo, tag, name, notes = p.get('repo', ''), p.get('tag'), p.get('release_name'), p.get('notes')
-        err = self._need(repo=repo, tag=tag)
+        repo, tag, name = p.get('repo', ''), p.get('tag'), p.get('release_name')
+        notes, body_err, aliased = self._release_notes(p)
+        err = self._need(repo=repo, tag=tag) or body_err
         if err:
             return err
         payload: dict[str, Any] = {'name': name or tag, 'tag_name': tag, 'description': notes or ''}
         data = self._request('POST', f'/projects/{_pid(repo)}/releases', json=payload)
-        return self._fmt_release(data)
+        return self._with_body_note(self._fmt_release(data), aliased)
 
     def _update_release(self, p: dict[str, Any]) -> str:
         repo, tag = p.get('repo', ''), p.get('tag')
-        err = self._need(repo=repo, tag=tag)
+        notes, body_err, aliased = self._release_notes(p)
+        err = self._need(repo=repo, tag=tag) or body_err
         if err:
             return err
         payload: dict[str, Any] = {}
         if p.get('release_name') is not None:
             payload['name'] = p['release_name']
-        if p.get('notes') is not None:
-            payload['description'] = p['notes']
+        if notes is not None:
+            payload['description'] = notes
         if not payload:
             return 'Error: nothing to update'
-        return self._fmt_release(self._request('PUT', f'/projects/{_pid(repo)}/releases/{tag}', json=payload))
+        return self._with_body_note(self._fmt_release(self._request('PUT', f'/projects/{_pid(repo)}/releases/{tag}', json=payload)), aliased)
 
     def _delete_release(self, p: dict[str, Any]) -> str:
         repo, tag = p.get('repo', ''), p.get('tag')

@@ -27,7 +27,7 @@ class GitHub(BaseGitTool):
             'issue_number': {'type': 'integer', 'description': 'Issue number'},
             'state': {'type': 'string', 'enum': ['open', 'closed', 'all'], 'description': 'Filter by state'},
             'title': {'type': 'string', 'description': 'Title for issue/PR/release'},
-            'body': {'type': 'string', 'description': 'Body text for issue/PR/comment/release notes'},
+            'body': {'type': 'string', 'description': 'Body text for issue/PR/comment'},
             'assignee': {'type': 'string', 'description': 'Username to assign'},
             'pr_number': {'type': 'integer', 'description': 'Pull request number'},
             'head': {'type': 'string', 'description': 'Source branch for PR'},
@@ -37,7 +37,7 @@ class GitHub(BaseGitTool):
             'release_id': {'type': 'integer', 'description': 'Release ID'},
             'tag': {'type': 'string', 'description': 'Tag name for the release'},
             'release_name': {'type': 'string', 'description': 'Release title'},
-            'notes': {'type': 'string', 'description': 'Release notes'},
+            'notes': {'type': 'string', 'description': 'Release notes (create_release, update_release)'},
             'draft': {'type': 'boolean', 'description': 'Whether release is a draft'},
             'prerelease': {'type': 'boolean', 'description': 'Whether release is a prerelease'},
             'attachments': {'type': 'array', 'items': {'type': 'string'}, 'description': 'File paths to attach'},
@@ -163,8 +163,9 @@ class GitHub(BaseGitTool):
         return self._fmt_release(data)
 
     def _create_release(self, p: dict[str, Any]) -> str:
-        repo, tag, name, notes, draft, prerelease, attachments = p.get('repo', ''), p.get('tag'), p.get('release_name'), p.get('notes'), p.get('draft'), p.get('prerelease'), p.get('attachments')
-        err = self._need(repo=repo, tag=tag)
+        repo, tag, name, draft, prerelease, attachments = p.get('repo', ''), p.get('tag'), p.get('release_name'), p.get('draft'), p.get('prerelease'), p.get('attachments')
+        notes, body_err, aliased = self._release_notes(p)
+        err = self._need(repo=repo, tag=tag) or body_err
         if err:
             return err
         payload: dict[str, Any] = {'tag_name': tag, 'name': name or tag, 'body': notes or '', 'draft': bool(draft), 'prerelease': bool(prerelease)}
@@ -172,28 +173,29 @@ class GitHub(BaseGitTool):
         err2 = self._fmt_error(data)
         if err2:
             return err2
-        result = self._fmt_release(data)
+        result = self._with_body_note(self._fmt_release(data), aliased)
         if attachments:
             result += '\n\n' + self._upload_attachments(data['upload_url'], [str(a) for a in attachments])
         return result
 
     def _update_release(self, p: dict[str, Any]) -> str:
         repo, rid = p.get('repo', ''), p.get('release_id')
-        err = self._need(repo=repo, release_id=rid)
+        notes, body_err, aliased = self._release_notes(p)
+        err = self._need(repo=repo, release_id=rid) or body_err
         if err:
             return err
         payload: dict[str, Any] = {}
         if p.get('release_name') is not None:
             payload['name'] = p['release_name']
-        if p.get('notes') is not None:
-            payload['body'] = p['notes']
+        if notes is not None:
+            payload['body'] = notes
         if p.get('draft') is not None:
             payload['draft'] = p['draft']
         if p.get('prerelease') is not None:
             payload['prerelease'] = p['prerelease']
         if not payload:
             return 'Error: nothing to update'
-        return self._fmt_release(self._request('PATCH', f'/repos/{repo}/releases/{rid}', json=payload))
+        return self._with_body_note(self._fmt_release(self._request('PATCH', f'/repos/{repo}/releases/{rid}', json=payload)), aliased)
 
     def _delete_release(self, p: dict[str, Any]) -> str:
         repo, rid = p.get('repo', ''), p.get('release_id')
