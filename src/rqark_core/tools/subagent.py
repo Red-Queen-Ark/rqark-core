@@ -68,7 +68,7 @@ class SubAgent(BaseTool):
         assert provider is not None
         parent = ctx.core
         assert parent is not None
-        core = AgentCore(agent_id=id, path=parent.path + (parent.agent_id,), tool_timeout=self._timeout)
+        core = AgentCore(agent_id=id, path=parent.path + (parent.agent_id,), tool_timeout=self._timeout, extras=ctx.extras)
 
         @core.on_chunk()
         async def forward_chunk(ev: AgentPayload[Chunk]):

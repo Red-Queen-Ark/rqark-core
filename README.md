@@ -58,8 +58,9 @@ Git tool 全部繼承 `BaseGitTool`，用單一 `action` 參數分派（例如 `
 Gitea 嘅 `create_issue`、`create_pull_request`、`update_pull_request` 支援 `labels`（label ID array）、`milestone`（milestone ID）、`due_date`；`list_labels` / `list_milestones` 輸出會帶 ID。`merge_pull_request` 嘅 `merge_method` 另有 `fast-forward-only`，並支援 `force_merge`。
 
 ### Prompts
-- 全部繼承 `BasePrompt`，有 `priority` 同 `get_messages()`。
+- 全部繼承 `BasePrompt`，有 `priority` 同 `async get_messages(ctx)`。
 - `AgentCore` 內部會自動按 `priority` 排序，`get_messages()` 回傳 `None` 就跳過。
+- `ctx` 係 `PromptContext(core, provider, extras)`，`extras` 同 `ToolContext.extras` 係同一個 dict（構造 `AgentCore(extras=...)` 傳入），所以 prompt 可以經 extras 攞 client 去打 API。
 - 用嚟生成 system prompt 內容。
 
 | 提示詞 | priority | 參數 | 輸出 |

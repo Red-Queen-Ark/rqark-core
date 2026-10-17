@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
 from rqark_core.types.provider import Provider
@@ -13,6 +13,7 @@ class ToolContext:
     core: 'AgentCore | None' = None
     provider: Provider | None = None
     tool_call_id: str | None = None
+    extras: dict[str, Any] = field(default_factory=dict)
 
 
 class ToolDict(TypedDict):

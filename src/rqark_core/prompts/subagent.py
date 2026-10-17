@@ -1,10 +1,10 @@
-from rqark_core.types.prompt import BasePrompt
+from rqark_core.types.prompt import BasePrompt, PromptContext
 
 
 class SubAgentPrompt(BasePrompt):
     priority = 20
 
-    def get_messages(self) -> str:
+    async def get_messages(self, ctx: PromptContext | None = None) -> str:
         parts: list[str] = [
             '## Role\nYou are a focused research subagent. Your task is to investigate and return only the final result.',
             '## Rules\n'

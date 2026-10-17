@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from rqark_core.types.prompt import BasePrompt
+from rqark_core.types.prompt import BasePrompt, PromptContext
 
 
 class AgentsMdPrompt(BasePrompt):
@@ -9,7 +9,7 @@ class AgentsMdPrompt(BasePrompt):
     def __init__(self, cwd: Path | None = None):
         self.cwd = cwd or Path.cwd()
 
-    def get_messages(self) -> str | None:
+    async def get_messages(self, ctx: PromptContext | None = None) -> str | None:
         agents_md = self.cwd / 'AGENTS.md'
         if not agents_md.exists():
             return None

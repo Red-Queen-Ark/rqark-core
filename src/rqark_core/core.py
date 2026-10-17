@@ -9,16 +9,17 @@ from openai import AsyncOpenAI, AsyncStream
 from rqark_core._core.event import AgentCoreEventEmitter
 from rqark_core._core.stream import ChunkHandler, ToolHandler
 from rqark_core.types.chat import AssistantMessage, Chunk, Message, SystemMessage
-from rqark_core.types.prompt import BasePrompt
+from rqark_core.types.prompt import BasePrompt, PromptContext
 from rqark_core.types.provider import Provider
 from rqark_core.types.tool import BaseTool, PlanItem, ToolContext
 
 
 class AgentCore(AgentCoreEventEmitter):
-    def __init__(self, agent_id: str = '', path: tuple[str, ...] = (), timeout: float = 300, tool_timeout: float = 120):
+    def __init__(self, agent_id: str = '', path: tuple[str, ...] = (), timeout: float = 300, tool_timeout: float = 120, extras: dict[str, Any] | None = None):
         super().__init__(agent_id, path)
         self.timeout = timeout
         self.tool_timeout = tool_timeout
+        self.extras: dict[str, Any] = extras if extras is not None else {}
         self.plan_items: list[PlanItem] = []
 
     """
@@ -30,11 +31,11 @@ class AgentCore(AgentCoreEventEmitter):
         http_client = httpx.AsyncClient(verify=ssl_context)
         return AsyncOpenAI(api_key=provider.api_key, base_url=provider.api_base, http_client=http_client, default_headers={}, timeout=self.timeout)
 
-    def _get_system_prompts(self, prompts: Sequence[BasePrompt]):
+    async def _get_system_prompts(self, prompts: Sequence[BasePrompt], ctx: PromptContext):
         system_prompts = []
         _prompts = sorted(prompts, key=lambda p: p.priority)
         for prompt in _prompts:
-            if content := prompt.get_messages():
+            if content := await prompt.get_messages(ctx):
                 p = SystemMessage(content)
                 system_prompts.append(p)
         return system_prompts
@@ -95,9 +96,10 @@ class AgentCore(AgentCoreEventEmitter):
     async def chat(self, provider: Provider, messages: Sequence[Message], prompts: Sequence[BasePrompt] = [], tools: Sequence[BaseTool] = []) -> tuple[Sequence[Message], Exception | None]:
         error: Exception | None = None
         tool_map = self._get_tool_map(tools)
-        ctx = ToolContext(core=self, provider=provider)
+        ctx = ToolContext(core=self, provider=provider, extras=self.extras)
+        prompt_ctx = PromptContext(core=self, provider=provider, extras=self.extras)
         tool_prompts = self._get_tool_prompts(tools, ctx)
-        system_prompts = self._get_system_prompts(prompts)
+        system_prompts = await self._get_system_prompts(prompts, prompt_ctx)
         history, system_count = self._build_history(provider, system_prompts, tool_prompts, messages)
         tool_handler = ToolHandler(self.tool_timeout, self._emit_chunk, self._emit_message)
         async with self._get_client(provider) as client:

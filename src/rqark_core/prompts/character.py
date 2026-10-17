@@ -1,4 +1,4 @@
-from rqark_core.types.prompt import BasePrompt
+from rqark_core.types.prompt import BasePrompt, PromptContext
 
 
 class CharacterPrompt(BasePrompt):
@@ -8,7 +8,7 @@ class CharacterPrompt(BasePrompt):
         self.identity = identity
         self.personality = personality
 
-    def get_messages(self) -> str | None:
+    async def get_messages(self, ctx: PromptContext | None = None) -> str | None:
         if not self.identity and not self.personality:
             return None
 

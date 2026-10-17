@@ -1,7 +1,7 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from rqark_core.types.prompt import BasePrompt
+from rqark_core.types.prompt import BasePrompt, PromptContext
 
 
 class DateTimePrompt(BasePrompt):
@@ -10,7 +10,7 @@ class DateTimePrompt(BasePrompt):
     def __init__(self, timezone_name: str = 'Asia/Hong_Kong') -> None:
         self._tz = ZoneInfo(timezone_name)
 
-    def get_messages(self) -> str:
+    async def get_messages(self, ctx: PromptContext | None = None) -> str:
         now = datetime.now(self._tz)
         tz_name = str(self._tz)
         utc_offset = now.utcoffset()

@@ -1,4 +1,4 @@
-from rqark_core.types.prompt import BasePrompt
+from rqark_core.types.prompt import BasePrompt, PromptContext
 
 text = """
 Anti-sycophancy:
@@ -13,5 +13,5 @@ Anti-sycophancy:
 class AntiSycophancyPrompt(BasePrompt):
     priority = 12
 
-    def get_messages(self) -> str | None:
+    async def get_messages(self, ctx: PromptContext | None = None) -> str | None:
         return text

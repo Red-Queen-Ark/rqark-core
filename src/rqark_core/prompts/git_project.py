@@ -1,7 +1,7 @@
 import subprocess
 from pathlib import Path
 
-from rqark_core.types.prompt import BasePrompt
+from rqark_core.types.prompt import BasePrompt, PromptContext
 
 
 class GitProjectPrompt(BasePrompt):
@@ -20,7 +20,7 @@ class GitProjectPrompt(BasePrompt):
         except Exception:
             return None
 
-    def get_messages(self) -> str | None:
+    async def get_messages(self, ctx: PromptContext | None = None) -> str | None:
         if not (self.cwd / '.git').exists():
             return None
 
