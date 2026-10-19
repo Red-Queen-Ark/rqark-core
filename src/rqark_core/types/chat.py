@@ -20,6 +20,14 @@ class Usage:
     prompt_tokens: int
     completion_tokens: int
     total_tokens: int
+    cached_tokens: int = 0
+    reasoning_tokens: int = 0
+
+    @property
+    def cache_hit_rate(self) -> float:
+        if not self.prompt_tokens:
+            return 0.0
+        return self.cached_tokens / self.prompt_tokens
 
     def to_dict(self) -> dict[str, int]:
         return asdict(self)
@@ -106,6 +114,8 @@ class AssistantMessage:
             d['tool_calls'] = [tc.to_dict() for tc in self.tool_calls]
         if self.reasoning_content:
             d['reasoning_content'] = self.reasoning_content
+        if self.usage:
+            d['usage'] = self.usage.to_dict()
         return d
 
 
