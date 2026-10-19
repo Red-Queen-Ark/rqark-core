@@ -54,10 +54,14 @@ class AgentCore(AgentCoreEventEmitter):
     History
     """
 
-    def _build_history(self, provider: Provider, system_prompts: Sequence[Message], tool_prompts: Sequence[Message], messages: Sequence[Message]) -> tuple[list[Message], int]:
+    def _render_head(self, provider: Provider, system_prompts: Sequence[Message], tool_prompts: Sequence[Message]) -> list[Message]:
         head = list(system_prompts) + list(tool_prompts)
         if provider.combine and head:
             head = [SystemMessage('\n'.join(m.content for m in head))]
+        return head
+
+    def _build_history(self, provider: Provider, system_prompts: Sequence[Message], tool_prompts: Sequence[Message], messages: Sequence[Message]) -> tuple[list[Message], int]:
+        head = self._render_head(provider, system_prompts, tool_prompts)
         return head + list(messages), len(head)
 
     def _clean_history(self, history: list[Message]) -> list[Message]:
@@ -98,12 +102,17 @@ class AgentCore(AgentCoreEventEmitter):
         tool_map = self._get_tool_map(tools)
         ctx = ToolContext(core=self, provider=provider, extras=self.extras)
         prompt_ctx = PromptContext(core=self, provider=provider, extras=self.extras)
-        tool_prompts = self._get_tool_prompts(tools, ctx)
         system_prompts = await self._get_system_prompts(prompts, prompt_ctx)
-        history, system_count = self._build_history(provider, system_prompts, tool_prompts, messages)
+        history, system_count = self._build_history(provider, system_prompts, [], messages)
         tool_handler = ToolHandler(self.tool_timeout, self._emit_chunk, self._emit_message)
         async with self._get_client(provider) as client:
             while True:
+                # Tool prompts are rebuilt every iteration: tools run inside this loop and may
+                # change the state they render (e.g. plan_update writes core.plan_items), so a
+                # head computed once per turn would be stale for the rest of the turn.
+                head = self._render_head(provider, system_prompts, self._get_tool_prompts(tools, ctx))
+                history[0:system_count] = head
+                system_count = len(head)
                 params = await self._build_chat_params(provider, history, tools)
                 try:
                     resp: AsyncStream = await client.chat.completions.create(**params)
