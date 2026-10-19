@@ -78,6 +78,8 @@ class AgentCore(AgentCoreEventEmitter):
         d.pop('created_at', None)
         d.pop('reasoning_content', None)
         d.pop('id', None)
+        # usage is recorded locally for accounting; the API rejects unknown message fields.
+        d.pop('usage', None)
         return d
 
     async def _build_chat_params(self, provider: Provider, history: list[Message], tools: Sequence[BaseTool]):

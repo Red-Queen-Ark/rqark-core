@@ -2,7 +2,7 @@ import uuid
 from datetime import UTC, datetime
 
 from rqark_core.core import AgentCore
-from rqark_core.types.chat import AssistantMessage, SystemMessage, ToolMessage, UserMessage
+from rqark_core.types.chat import AssistantMessage, SystemMessage, ToolMessage, Usage, UserMessage
 
 
 def test_message_to_dict_carries_metadata():
@@ -36,7 +36,7 @@ def test_messages_default_id_is_unique_uuid4():
 
 def test_to_api_message_strips_metadata():
     core = AgentCore()
-    messages = [UserMessage('hi'), AssistantMessage('yo', reasoning_content='think'), AssistantMessage('tool-call', tool_calls=None), ToolMessage('c1', 'result'), SystemMessage('sys')]
+    messages = [UserMessage('hi'), AssistantMessage('yo', reasoning_content='think', usage=Usage(1, 2, 3)), AssistantMessage('tool-call', tool_calls=None), ToolMessage('c1', 'result'), SystemMessage('sys')]
     api = [core._to_api_message(m) for m in messages]
     assert api == [
         {'role': 'user', 'content': [{'type': 'text', 'text': 'hi'}]},

@@ -63,8 +63,20 @@ class ChunkHandler:
                         acc['function']['arguments'] += tc.function.arguments
 
     async def handle_usage(self, chunk: ChatCompletionChunk) -> None:
-        if chunk.usage:
-            self.usage = Usage(**chunk.usage.model_dump(include={'prompt_tokens', 'completion_tokens', 'total_tokens'}))
+        usage = chunk.usage
+        if not usage:
+            return
+        # Providers disagree on which detail objects they send (and some omit them entirely),
+        # so read the nested fields defensively instead of trusting the model shape.
+        prompt_details = getattr(usage, 'prompt_tokens_details', None)
+        completion_details = getattr(usage, 'completion_tokens_details', None)
+        self.usage = Usage(
+            prompt_tokens=getattr(usage, 'prompt_tokens', 0) or 0,
+            completion_tokens=getattr(usage, 'completion_tokens', 0) or 0,
+            total_tokens=getattr(usage, 'total_tokens', 0) or 0,
+            cached_tokens=getattr(prompt_details, 'cached_tokens', 0) or 0,
+            reasoning_tokens=getattr(completion_details, 'reasoning_tokens', 0) or 0,
+        )
 
     def _to_tool_call(self, data: dict[str, Any]) -> ToolCall:
         return ToolCall(data['id'], data['type'], data['function']['name'], data['function']['arguments'])
