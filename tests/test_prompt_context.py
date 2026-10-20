@@ -55,7 +55,7 @@ async def test_system_prompts_receive_the_shared_extras():
     extras = {'data_cloud': 'client', 'agent_id': 'agent-1'}
     prompt = RecordingPrompt()
     core = ScriptedCore([AssistantMessage(content='done')], extras=extras)
-    provider = Provider('model', 'key', 'http://test', 0)
+    provider = Provider('model', 'http://test', 0, 'key')
 
     await core.chat(provider, [UserMessage('hi')], [prompt], [])
 
@@ -87,7 +87,7 @@ async def test_subagent_prompts_also_see_the_extras(monkeypatch: Any):
 
     parent = AgentCore(extras=extras)
     tool = SubAgent([child_prompt], [])
-    provider = Provider('model', 'key', 'http://test', 0)
+    provider = Provider('model', 'http://test', 0, 'key')
     await tool.run(ctx=ToolContext(core=parent, provider=provider, extras=extras), prompt='go')
 
     assert parent_prompt.seen == []

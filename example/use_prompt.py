@@ -8,7 +8,7 @@ from rqark_core.types.chat import Chunk, Message, ToolMessage, UserMessage
 from rqark_core.types.event import AgentPayload
 from rqark_core.types.provider import Provider
 
-provider = Provider(MODEL_NAME, 'api_key', 'http://127.0.0.1:8080', 0, combine=True)
+provider = Provider(MODEL_NAME, 'http://127.0.0.1:8080', 0, 'api_key', combine=True)
 
 prompts = [DateTimePrompt()]
 

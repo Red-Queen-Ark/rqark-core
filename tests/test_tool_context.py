@@ -73,7 +73,7 @@ async def test_chat_hands_extras_to_every_tool_call():
     tool = RecordingTool()
     extras = {'data_cloud': 'client', 'agent_id': 'agent-1'}
     core = ScriptedCore([AssistantMessage(content='', tool_calls=[ToolCall('call-1', 'function', 'record', '{}')]), AssistantMessage(content='done')], extras=extras)
-    provider = Provider('model', 'key', 'http://test', 0)
+    provider = Provider('model', 'http://test', 0, 'key')
 
     await core.chat(provider, [UserMessage('hi')], [], [tool])
 
@@ -98,7 +98,7 @@ async def test_subagent_child_core_shares_extras(monkeypatch: Any):
 
     parent = AgentCore(extras=extras)
     tool = SubAgent([], [])
-    provider = Provider('model', 'key', 'http://test', 0)
+    provider = Provider('model', 'http://test', 0, 'key')
     result = await tool.run(ctx=ToolContext(core=parent, provider=provider, extras=extras), prompt='go')
 
     assert result == 'child result'
