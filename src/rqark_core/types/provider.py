@@ -42,9 +42,10 @@ def resolve_context_window(model_name: str) -> int:
 @dataclass
 class Provider:
     model_name: str
-    api_key: str
     api_base: str
     priority: int
+    api_key: str | None = None
+    id: str | None = None
     name: str = ''
     reasoning_effort: Literal['low', 'high', 'max'] | None = None
     thinking: Literal['enabled', 'disabled'] | None = None

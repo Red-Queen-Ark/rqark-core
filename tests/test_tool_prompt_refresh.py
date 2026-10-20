@@ -68,7 +68,7 @@ async def test_tool_prompt_is_rebuilt_after_a_tool_changes_core_state(monkeypatc
     _patch(monkeypatch, script, sent)
 
     core = AgentCore()
-    messages, error = await core.chat(Provider('m', 'k', 'http://x', 0), [], [], [_MutableTool()])
+    messages, error = await core.chat(Provider('m', 'http://x', 0, 'k'), [], [], [_MutableTool()])
 
     assert error is None
     assert [type(m).__name__ for m in messages] == ['AssistantMessage', 'ToolMessage', 'AssistantMessage']
@@ -83,7 +83,7 @@ async def test_tool_prompt_rebuild_keeps_the_history_tail(monkeypatch):
     _patch(monkeypatch, script, sent)
 
     core = AgentCore()
-    messages, _ = await core.chat(Provider('m', 'k', 'http://x', 0), [], [], [_MutableTool()])
+    messages, _ = await core.chat(Provider('m', 'http://x', 0, 'k'), [], [], [_MutableTool()])
 
     assert len(sent[0]) == 1 and len(sent[1]) == 1
     assert [type(m).__name__ for m in messages] == ['AssistantMessage', 'ToolMessage', 'AssistantMessage']
@@ -96,7 +96,7 @@ async def test_combined_head_is_rebuilt_as_a_single_system_message(monkeypatch):
     _patch(monkeypatch, script, sent)
 
     core = AgentCore()
-    await core.chat(Provider('m', 'k', 'http://x', 0, combine=True), [], [], [_MutableTool()])
+    await core.chat(Provider('m', 'http://x', 0, 'k', combine=True), [], [], [_MutableTool()])
 
     assert len(sent[0]) == 1 and len(sent[1]) == 1
     assert 'EMPTY' in sent[0][0].content
@@ -109,7 +109,7 @@ async def test_turn_without_tool_calls_sends_one_iteration(monkeypatch):
     _patch(monkeypatch, script, sent)
 
     core = AgentCore()
-    messages, error = await core.chat(Provider('m', 'k', 'http://x', 0), [], [], [_MutableTool()])
+    messages, error = await core.chat(Provider('m', 'http://x', 0, 'k'), [], [], [_MutableTool()])
 
     assert error is None
     assert [m.content for m in messages] == ['hi']
