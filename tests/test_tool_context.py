@@ -94,9 +94,11 @@ async def test_subagent_child_core_shares_extras(monkeypatch: Any):
         async def chat(self, provider: Any, messages: Any, prompts: Any = (), tools: Any = ()):
             return [AssistantMessage('child result')], None
 
-    monkeypatch.setattr('rqark_core.tools.subagent.AgentCore', ChildCore)
+    class ParentCore(AgentCore):
+        def _spawn(self, agent_id: str, path: tuple[str, ...], tool_timeout: float, extras: dict[str, Any]) -> AgentCore:
+            return ChildCore(agent_id=agent_id, path=path, tool_timeout=tool_timeout, extras=extras)
 
-    parent = AgentCore(extras=extras)
+    parent = ParentCore(extras=extras)
     tool = SubAgent([], [])
     provider = Provider('model', 'http://test', 0, 'key')
     result = await tool.run(ctx=ToolContext(core=parent, provider=provider, extras=extras), prompt='go')
