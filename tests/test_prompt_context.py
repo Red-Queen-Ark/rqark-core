@@ -83,9 +83,11 @@ async def test_subagent_prompts_also_see_the_extras(monkeypatch: Any):
                 await prompt.get_messages(PromptContext(core=self, provider=provider, extras=self.extras))
             return [AssistantMessage('child result')], None
 
-    monkeypatch.setattr('rqark_core.tools.subagent.AgentCore', ChildCore)
+    class ParentCore(AgentCore):
+        def _spawn(self, agent_id: str, path: tuple[str, ...], tool_timeout: float, extras: dict[str, Any]) -> AgentCore:
+            return ChildCore(agent_id=agent_id, path=path, tool_timeout=tool_timeout, extras=extras)
 
-    parent = AgentCore(extras=extras)
+    parent = ParentCore(extras=extras)
     tool = SubAgent([child_prompt], [])
     provider = Provider('model', 'http://test', 0, 'key')
     await tool.run(ctx=ToolContext(core=parent, provider=provider, extras=extras), prompt='go')
@@ -93,3 +95,26 @@ async def test_subagent_prompts_also_see_the_extras(monkeypatch: Any):
     assert parent_prompt.seen == []
     assert child_prompt.seen[0] is not None
     assert child_prompt.seen[0].extras is extras
+
+
+async def test_subagent_uses_the_parent_core_type(monkeypatch: Any):
+    """A proxied parent must not hand its subagent the direct-provider core."""
+    spawned: list[AgentCore] = []
+
+    class ProxiedCore(AgentCore):
+        def _spawn(self, agent_id: str, path: tuple[str, ...], tool_timeout: float, extras: dict[str, Any]) -> AgentCore:
+            child = ProxiedCore(agent_id=agent_id, path=path, tool_timeout=tool_timeout, extras=extras)
+            spawned.append(child)
+            return child
+
+        async def chat(self, provider: Any, messages: Any, prompts: Any = (), tools: Any = ()):
+            return [AssistantMessage('child result')], None
+
+    parent = ProxiedCore()
+    tool = SubAgent([], [])
+    provider = Provider('model', 'http://test', 0, 'key')
+    result = await tool.run(ctx=ToolContext(core=parent, provider=provider, extras={}), prompt='go')
+
+    assert result == 'child result'
+    assert len(spawned) == 1
+    assert type(spawned[0]) is ProxiedCore

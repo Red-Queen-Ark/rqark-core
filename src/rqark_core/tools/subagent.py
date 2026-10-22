@@ -2,7 +2,6 @@ from collections.abc import Sequence
 from typing import Any
 from uuid import uuid4
 
-from rqark_core.core import AgentCore
 from rqark_core.types.chat import Chunk, Message, UserMessage
 from rqark_core.types.event import AgentPayload
 from rqark_core.types.prompt import BasePrompt
@@ -68,7 +67,7 @@ class SubAgent(BaseTool):
         assert provider is not None
         parent = ctx.core
         assert parent is not None
-        core = AgentCore(agent_id=id, path=parent.path + (parent.agent_id,), tool_timeout=self._timeout, extras=ctx.extras)
+        core = parent._spawn(agent_id=id, path=parent.path + (parent.agent_id,), tool_timeout=self._timeout, extras=ctx.extras)
 
         @core.on_chunk()
         async def forward_chunk(ev: AgentPayload[Chunk]):

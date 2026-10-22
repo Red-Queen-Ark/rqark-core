@@ -31,6 +31,14 @@ class AgentCore(AgentCoreEventEmitter):
         http_client = httpx.AsyncClient(verify=ssl_context)
         return AsyncOpenAI(api_key=provider.api_key, base_url=provider.api_base, http_client=http_client, default_headers={}, timeout=self.timeout)
 
+    def _spawn(self, agent_id: str, path: tuple[str, ...], tool_timeout: float, extras: dict[str, Any]) -> AgentCore:
+        """Build the core a subagent runs on, on the same route as its parent.
+
+        Subclasses that reach providers another way (a proxy, another SDK) override
+        this; building an AgentCore directly would drop back to the default route.
+        """
+        return AgentCore(agent_id=agent_id, path=path, tool_timeout=tool_timeout, extras=extras)
+
     async def _get_system_prompts(self, prompts: Sequence[BasePrompt], ctx: PromptContext):
         system_prompts = []
         _prompts = sorted(prompts, key=lambda p: p.priority)
