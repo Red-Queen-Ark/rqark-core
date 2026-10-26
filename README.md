@@ -32,31 +32,31 @@ from rqark_core.types.chat import Chunk, Message, UserMessage
 from rqark_core.tools import WebFetch, WebSearch
 from rqark_core.prompts import DateTimePrompt
 
-provider = Provider(
-    model_name='gpt-5',
-    api_base='https://api.openai.com/v1',
-    priority=0,
-    api_key='sk-...',
-)
+provider = Provider(model_name='gpt-5', api_base='https://api.openai.com/v1', priority=0, api_key='sk-...')
 
 core = AgentCore()
+
 
 @core.on_chunk()
 async def print_chunk(event: AgentPayload[Chunk]):
     print(event.payload)
 
+
 @core.on_message()
 async def print_message(event: AgentPayload[Message]):
     print(event.payload)
 
+
 prompts = [DateTimePrompt()]
 tools = [WebSearch(), WebFetch()]
+
 
 async def main():
     messages = [UserMessage('What news in Hong Kong?')]
     history, error = await core.chat(provider, messages, prompts=prompts, tools=tools)
     if error:
         print('failed:', error)
+
 
 asyncio.run(main())
 ```
