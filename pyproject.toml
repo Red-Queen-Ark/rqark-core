@@ -4,12 +4,32 @@ version = "0.4.1"
 description = "Red Queen Ark Core Agent Library"
 readme = "README.md"
 requires-python = ">=3.14"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "RedQueenArk" }]
+keywords = ["agent", "llm", "openai", "streaming", "framework"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
 dependencies = [
     "openai>=2.37.0",
     "ddgs>=0.5.3",
     "httpx>=0.28.1",
     "tzdata>=2026.3",
 ]
+
+[project.urls]
+Homepage = "https://gitea.carhyme.top/RedQueenArk/rqark-core"
+Repository = "https://gitea.carhyme.top/RedQueenArk/rqark-core"
+Issues = "https://gitea.carhyme.top/RedQueenArk/rqark-core/issues"
+Changelog = "https://gitea.carhyme.top/RedQueenArk/rqark-core/src/branch/main/CHANGELOG.md"
 
 [build-system]
 requires = ["hatchling"]
