@@ -9,13 +9,7 @@ license-files = ["LICENSE"]
 authors = [{ name = "RedQueenArk" }]
 keywords = ["agent", "llm", "openai", "streaming", "framework"]
 classifiers = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.14",
-    "Topic :: Software Development :: Libraries :: Python Modules",
     "Typing :: Typed",
 ]
 dependencies = [
