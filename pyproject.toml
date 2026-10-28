@@ -10,7 +10,6 @@ authors = [{ name = "RedQueenArk" }]
 keywords = ["agent", "llm", "openai", "streaming", "framework"]
 classifiers = [
     "Programming Language :: Python :: 3.14",
-    "Typing :: Typed",
 ]
 dependencies = [
     "openai>=2.37.0",
@@ -23,7 +22,6 @@ dependencies = [
 Homepage = "https://gitea.carhyme.top/RedQueenArk/rqark-core"
 Repository = "https://gitea.carhyme.top/RedQueenArk/rqark-core"
 Issues = "https://gitea.carhyme.top/RedQueenArk/rqark-core/issues"
-Changelog = "https://gitea.carhyme.top/RedQueenArk/rqark-core/src/branch/main/CHANGELOG.md"
 
 [build-system]
 requires = ["hatchling"]
