@@ -1,6 +1,6 @@
 [project]
 name = "rqark-core"
-version = "0.4.1"
+version = "0.5.0"
 description = "Red Queen Ark Core Agent Library"
 readme = "README.md"
 requires-python = ">=3.14"
@@ -16,6 +16,7 @@ dependencies = [
     "ddgs>=0.5.3",
     "httpx>=0.28.1",
     "tzdata>=2026.3",
+    "markitdown[docx,pdf]>=0.1.9",
 ]
 
 [project.urls]
