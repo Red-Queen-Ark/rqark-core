@@ -16,10 +16,8 @@ dependencies = [
     "ddgs>=0.5.3",
     "httpx>=0.28.1",
     "tzdata>=2026.3",
+    "markitdown[docx,pdf]>=0.1.9",
 ]
-
-[project.optional-dependencies]
-document = ["markitdown[docx,pdf]>=0.1.9"]
 
 [project.urls]
 Homepage = "https://github.com/Red-Queen-Ark/rqark-core"
@@ -35,7 +33,6 @@ packages = ["src/rqark_core"]
 
 [dependency-groups]
 dev = [
-    "markitdown[docx,pdf]>=0.1.9",
     "mypy>=2.1.0",
     "pyright>=1.1.411",
     "pytest>=9.1.1",

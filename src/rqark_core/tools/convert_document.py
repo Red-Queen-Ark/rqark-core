@@ -46,7 +46,7 @@ class ConvertDocument(BaseTool):
 
     def _convert(self, path: str, output: str | None) -> str:
         if MarkItDown is None:
-            return "Error: markitdown is not installed (pip install 'rqark-core[document]')"
+            return 'Error: markitdown is not installed'
         src = Path(path)
         if not src.exists():
             return f'Error: file not found: {path}'
