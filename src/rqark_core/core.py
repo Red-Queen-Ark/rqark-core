@@ -81,17 +81,19 @@ class AgentCore(AgentCoreEventEmitter):
     Chat Loop
     """
 
-    def _to_api_message(self, m: Message) -> dict[str, Any]:
+    def _to_api_message(self, m: Message, keep_reasoning: bool = False) -> dict[str, Any]:
         d: dict[str, Any] = dict(m.to_dict())
         d.pop('created_at', None)
-        d.pop('reasoning_content', None)
+        if not keep_reasoning:
+            d.pop('reasoning_content', None)
         d.pop('id', None)
         # usage is recorded locally for accounting; the API rejects unknown message fields.
         d.pop('usage', None)
         return d
 
     async def _build_chat_params(self, provider: Provider, history: list[Message], tools: Sequence[BaseTool]):
-        params: dict[str, Any] = {'model': provider.model_name, 'messages': [self._to_api_message(m) for m in history], 'stream': True, 'stream_options': {'include_usage': True}}
+        keep_reasoning = provider.echoes_reasoning
+        params: dict[str, Any] = {'model': provider.model_name, 'messages': [self._to_api_message(m, keep_reasoning) for m in history], 'stream': True, 'stream_options': {'include_usage': True}}
         if tools:
             params['tools'] = [t.get_openai_schema() for t in tools]
         if provider.reasoning_effort:

@@ -45,3 +45,32 @@ def test_to_api_message_strips_metadata():
         {'role': 'tool', 'tool_call_id': 'c1', 'content': 'result'},
         {'role': 'system', 'content': 'sys'},
     ]
+
+
+def test_to_api_message_keeps_reasoning_when_thinking():
+    core = AgentCore()
+    m = AssistantMessage('yo', reasoning_content='think', usage=Usage(1, 2, 3))
+    api = core._to_api_message(m, keep_reasoning=True)
+    assert api == {'role': 'assistant', 'content': 'yo', 'reasoning_content': 'think'}
+
+
+def test_provider_echoes_reasoning():
+    from rqark_core.types.provider import Provider
+
+    assert Provider('deepseek-reasoner', 'http://x', 0).echoes_reasoning
+    assert Provider('deepseek-v4-pro', 'http://x', 0, thinking='enabled').echoes_reasoning
+    assert Provider('deepseek-v4-pro', 'http://x', 0, reasoning_effort='high').echoes_reasoning
+    assert not Provider('deepseek-chat', 'http://x', 0).echoes_reasoning
+    assert not Provider('deepseek-v4-pro', 'http://x', 0, thinking='disabled').echoes_reasoning
+
+
+async def test_build_chat_params_passes_back_reasoning():
+    from rqark_core.types.provider import Provider
+
+    core = AgentCore()
+    history = [UserMessage('hi'), AssistantMessage('yo', reasoning_content='think')]
+    params = await core._build_chat_params(Provider('deepseek-reasoner', 'http://x', 0), history, [])
+    assert params['messages'][1]['reasoning_content'] == 'think'
+
+    params = await core._build_chat_params(Provider('deepseek-chat', 'http://x', 0), history, [])
+    assert 'reasoning_content' not in params['messages'][1]

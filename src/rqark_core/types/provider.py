@@ -64,6 +64,10 @@ class Provider:
     def context_window(self) -> int:
         return resolve_context_window(self.model_name)
 
+    @property
+    def echoes_reasoning(self) -> bool:
+        return self.thinking == 'enabled' or bool(self.reasoning_effort) or 'reasoner' in self.model_name
+
     def to_dict(self):
         d = asdict(self)
         d['context_window'] = self.context_window
