@@ -1,10 +1,25 @@
+import asyncio
 import subprocess
+import sys
 from pathlib import Path
 
 from rqark_core.types.prompt import BasePrompt, PromptContext
 
 
+def _creation_flags() -> int:
+    if sys.platform != 'win32':
+        return 0
+    return getattr(subprocess, 'CREATE_NO_WINDOW', 0)
+
+
 class GitProjectPrompt(BasePrompt):
+    """The repository state of the working directory: branch, HEAD, status and recent commits.
+
+    The four commands run through ``git``, so they are run in worker threads and
+    together: a slow repository (network share, on-access virus scan) must not hold
+    the event loop, and the prompts of a turn are awaited while the UI is running.
+    """
+
     priority = 70
 
     def __init__(self, cwd: Path | None = None):
@@ -13,28 +28,32 @@ class GitProjectPrompt(BasePrompt):
     @staticmethod
     def _run(cmd: list[str], cwd: Path) -> str | None:
         try:
-            result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=10)
+            result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=10, creationflags=_creation_flags())
             if result.returncode != 0:
                 return None
             return result.stdout.strip()
         except Exception:
             return None
 
+    async def _run_all(self, *commands: list[str]) -> list[str | None]:
+        return await asyncio.gather(*(asyncio.to_thread(self._run, cmd, self.cwd) for cmd in commands))
+
     async def get_messages(self, ctx: PromptContext | None = None) -> str | None:
         if not (self.cwd / '.git').exists():
             return None
 
-        parts: list[str] = ['## Git Project Context']
+        branch, head, status, log = await self._run_all(
+            ['git', 'branch', '--show-current'],
+            ['git', 'rev-parse', 'HEAD'],
+            ['git', 'status', '--porcelain'],
+            ['git', 'log', '--oneline', '-10', '--decorate'],
+        )
 
-        branch = self._run(['git', 'branch', '--show-current'], self.cwd)
+        parts: list[str] = ['## Git Project Context']
         if branch:
             parts.append(f'Current branch: {branch}')
-
-        head = self._run(['git', 'rev-parse', 'HEAD'], self.cwd)
         if head:
             parts.append(f'HEAD: {head}')
-
-        status = self._run(['git', 'status', '--porcelain'], self.cwd)
         if status:
             status_lines = status.split('\n')
             parts.append('Working tree status (porcelain):\n' + '\n'.join(status_lines[:40]))
@@ -42,8 +61,6 @@ class GitProjectPrompt(BasePrompt):
                 parts.append(f'... ({len(status_lines) - 40} more lines truncated)')
         else:
             parts.append('Working tree: clean')
-
-        log = self._run(['git', 'log', '--oneline', '-10', '--decorate'], self.cwd)
         if log:
             parts.append(f'Recent commits:\n{log}')
 
