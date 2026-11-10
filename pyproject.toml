@@ -1,6 +1,6 @@
 [project]
 name = "rqark-core"
-version = "0.5.0"
+version = "0.5.1"
 description = "Red Queen Ark Core - stateless AI agent engine with agent toolkit, base prompts and unified streaming agent events"
 readme = "README.md"
 requires-python = ">=3.14"
