@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
 from typing import Any
@@ -48,6 +49,35 @@ async def test_run_tool_exposes_the_call_id_without_mutating_the_shared_context(
     result = history[0]
     assert isinstance(result, ToolMessage)
     assert (result.tool_call_id, result.content, result.tool_name, result.arguments) == ('call-1', 'ok', 'record', '{}')
+
+
+async def test_tool_results_yield_to_the_loop_between_emissions():
+    counter = 0
+    seen: list[int] = []
+    done = False
+
+    async def ticker() -> None:
+        nonlocal counter
+        while not done:
+            await asyncio.sleep(0)
+            counter += 1
+
+    async def on_chunk(chunk: Chunk) -> None:
+        seen.append(counter)
+
+    handler = ToolHandler(5, on_chunk, _noop_message)
+    tools = {f'record{i}': RecordingTool() for i in range(3)}
+    msg = AssistantMessage(content='', tool_calls=[ToolCall(f'call-{i}', 'function', f'record{i}', '{}') for i in range(3)])
+    history: list[Message] = []
+    task = asyncio.create_task(ticker())
+    try:
+        await handler.use_tools(msg, tools, history, ToolContext())
+    finally:
+        done = True
+        await task
+    assert len(history) == 3
+    assert seen == sorted(seen)
+    assert seen[-1] > seen[0]
 
 
 class ScriptedCore(AgentCore):

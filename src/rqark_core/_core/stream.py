@@ -106,6 +106,7 @@ class ToolHandler:
             history.append(tool_msg)
             await self._emit_message(tool_msg)
             await self._emit_chunk(Chunk('tool_result', tool_msg))
+            await asyncio.sleep(0)
 
     async def _run_tool(self, tc: ToolCall, tool_map: dict[str, BaseTool], ctx: ToolContext) -> ToolMessage:
         name = tc.name
