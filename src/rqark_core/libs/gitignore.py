@@ -128,6 +128,7 @@ class GitIgnore:
         self._root = root
         self._rules = rules
         self._loaded: set[str] = {''}
+        self._decided: dict[tuple[str, bool], bool] = {}
 
     @classmethod
     def load(cls, root: Path) -> 'GitIgnore':
@@ -154,7 +155,10 @@ class GitIgnore:
             return
         self._loaded.add(rel)
         base = f'{self._root}/' if not rel else f'{self._root}/{rel}/'
-        self._rules.extend(_read_rules(Path(base) / '.gitignore', base))
+        loaded = _read_rules(Path(base) / '.gitignore', base)
+        if loaded:
+            self._rules.extend(loaded)
+            self._decided.clear()
 
     def _decide(self, absolute: str, is_dir: bool) -> bool:
         ignored = False
@@ -165,11 +169,20 @@ class GitIgnore:
         return ignored
 
     def is_ignored(self, rel: str, is_dir: bool) -> bool:
+        key = (rel, is_dir)
+        cached = self._decided.get(key)
+        if cached is not None:
+            return cached
         parts = rel.split('/')
         last = len(parts) if is_dir else len(parts) - 1
         for depth in range(0, last + 1):
             self._ensure('/'.join(parts[:depth]))
+        ignored = False
         for depth in range(1, last + 1):
             if self._decide(f'{self._root}/' + '/'.join(parts[:depth]), True):
-                return True
-        return self._decide(f'{self._root}/' + rel, is_dir)
+                ignored = True
+                break
+        if not ignored:
+            ignored = self._decide(f'{self._root}/' + rel, is_dir)
+        self._decided[key] = ignored
+        return ignored

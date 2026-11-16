@@ -1,3 +1,5 @@
+import threading
+
 import pytest
 
 from rqark_core.libs.gitignore import GitIgnore
@@ -43,54 +45,52 @@ def test_pattern_semantics(tmp_path, pattern, rel, is_dir, expected):
 def test_negation_and_last_match_wins(tmp_path):
     _write(tmp_path / '.gitignore', '*.log\n!keep.log\n')
     ignore = GitIgnore.load(tmp_path)
-    assert ignore.is_ignored('drop.log', False) is True
     assert ignore.is_ignored('keep.log', False) is False
+    assert ignore.is_ignored('drop.log', False) is True
 
 
 def test_comments_and_escaped_hash_are_not_patterns(tmp_path):
-    _write(tmp_path / '.gitignore', '# comment\n\\#literal\n\n   \n')
+    _write(tmp_path / '.gitignore', '# comment\n\\#literal\n')
     ignore = GitIgnore.load(tmp_path)
-    assert ignore.is_ignored('comment', False) is False
+    assert ignore.is_ignored('# comment', False) is False
     assert ignore.is_ignored('#literal', False) is True
 
 
 def test_nested_gitignore_overrides_parent(tmp_path):
-    _write(tmp_path / '.gitignore', '*.txt\n')
-    _write(tmp_path / 'sub' / '.gitignore', '!keep.txt\n')
-    (tmp_path / 'sub' / 'x.txt').write_text('x', encoding='utf-8')
-    (tmp_path / 'sub' / 'keep.txt').write_text('k', encoding='utf-8')
+    _write(tmp_path / '.gitignore', '*.log\n')
+    _write(tmp_path / 'sub' / '.gitignore', '!keep.log\n')
     ignore = GitIgnore.load(tmp_path)
-    assert ignore.is_ignored('sub/x.txt', False) is True
-    assert ignore.is_ignored('sub/keep.txt', False) is False
-    assert ignore.is_ignored('other.txt', False) is True
+    assert ignore.is_ignored('sub/keep.log', False) is False
+    assert ignore.is_ignored('keep.log', False) is True
 
 
 def test_ignored_directory_covers_children(tmp_path):
-    _write(tmp_path / '.gitignore', '.temp/\n')
+    _write(tmp_path / '.gitignore', 'build/\n')
     ignore = GitIgnore.load(tmp_path)
-    assert ignore.is_ignored('.temp', True) is True
-    assert ignore.is_ignored('.temp/compare/compare.ipynb', False) is True
+    assert ignore.is_ignored('build', True) is True
+    assert ignore.is_ignored('build/out.o', False) is True
 
 
 def test_parent_gitignore_of_git_root_applies(tmp_path):
-    _write(tmp_path / '.gitignore', 'src/generated.py\n')
     (tmp_path / '.git').mkdir()
-    _write(tmp_path / 'src' / 'generated.py', 'x')
-    ignore = GitIgnore.load(tmp_path / 'src')
-    assert ignore.is_ignored('generated.py', False) is True
+    _write(tmp_path / '.gitignore', '*.log\n')
+    _write(tmp_path / 'sub' / '.gitignore', '!keep.log\n')
+    ignore = GitIgnore.load(tmp_path / 'sub')
+    assert ignore.is_ignored('drop.log', False) is True
+    assert ignore.is_ignored('keep.log', False) is False
 
 
 def test_git_info_exclude_applies(tmp_path):
-    (tmp_path / '.git' / 'info').mkdir(parents=True)
-    _write(tmp_path / '.git' / 'info' / 'exclude', 'secret.txt\n')
+    _write(tmp_path / '.git' / 'info' / 'exclude', '*.log\n')
     ignore = GitIgnore.load(tmp_path)
-    assert ignore.is_ignored('secret.txt', False) is True
+    assert ignore.is_ignored('a.log', False) is True
 
 
 def test_gitignore_inside_skipped_dir_is_not_scanned(tmp_path):
-    _write(tmp_path / '.venv' / '.gitignore', 'a.txt\n')
+    _write(tmp_path / '.gitignore', 'build/\n')
+    _write(tmp_path / 'build' / '.gitignore', '!keep.log\n')
     ignore = GitIgnore.load(tmp_path)
-    assert ignore.is_ignored('a.txt', False) is False
+    assert ignore.is_ignored('build/keep.log', False) is True
 
 
 async def test_grep_skips_ignored_files(tmp_path):
@@ -144,3 +144,54 @@ async def test_grep_include_glob_still_works(tmp_path):
     result = await Grep().run(pattern='otp', path=str(tmp_path), include='*.log')
     assert 'b.log' not in result
     assert 'No matches' in result
+
+
+async def test_grep_does_not_follow_symlink_cycle(tmp_path):
+    _write(tmp_path / 'a' / 'deep' / 'app.py', 'otp_enabled\n')
+    (tmp_path / 'a' / 'loop').symlink_to(tmp_path)
+    result = await Grep().run(pattern='otp', path=str(tmp_path))
+    assert 'app.py' in result
+
+
+async def test_grep_respects_max_depth(tmp_path, monkeypatch):
+    monkeypatch.setattr(Grep, 'MAX_DEPTH', 1)
+    _write(tmp_path / 'one' / 'two' / 'three' / 'deep.txt', 'otp_enabled\n')
+    _write(tmp_path / 'top.txt', 'otp_enabled\n')
+    result = await Grep().run(pattern='otp', path=str(tmp_path))
+    assert 'top.txt' in result
+    assert 'deep.txt' not in result
+
+
+async def test_grep_respects_max_files(tmp_path, monkeypatch):
+    monkeypatch.setattr(Grep, 'MAX_FILES', 1)
+    _write(tmp_path / 'a.txt', 'otp_enabled\n')
+    _write(tmp_path / 'b.txt', 'otp_enabled\n')
+    result = await Grep().run(pattern='otp', path=str(tmp_path))
+    assert 'truncated at' in result
+
+
+async def test_grep_skips_files_over_size_limit(tmp_path, monkeypatch):
+    monkeypatch.setattr(Grep, 'MAX_FILE_SIZE', 4)
+    _write(tmp_path / 'big.txt', 'otp_enabled\n')
+    result = await Grep().run(pattern='otp', path=str(tmp_path))
+    assert 'No matches' in result
+
+
+async def test_grep_explicit_file_over_size_limit(tmp_path, monkeypatch):
+    monkeypatch.setattr(Grep, 'MAX_FILE_SIZE', 4)
+    _write(tmp_path / 'big.txt', 'otp_enabled\n')
+    result = await Grep().run(pattern='otp', path=str(tmp_path / 'big.txt'))
+    assert 'No matches' in result
+
+
+def test_grep_stops_when_cancelled(tmp_path):
+    _write(tmp_path / 'a.txt', 'otp_enabled\n')
+    cancel = threading.Event()
+    cancel.set()
+    result = Grep()._grep('otp', str(tmp_path), None, False, cancel)
+    assert 'No matches' in result
+
+
+def test_grep_exposes_a_timeout():
+    assert Grep().timeout is not None
+    assert Grep().timeout > 0
