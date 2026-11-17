@@ -47,7 +47,7 @@ class _Client:
 
 
 def _patch(monkeypatch, script: list[AssistantMessage], sent: list[list[SystemMessage]]) -> None:
-    async def parse_stream(self, stream):
+    async def parse_stream(self, stream, handle_chunk=None):
         return script.pop(0)
 
     def get_client(self, provider):

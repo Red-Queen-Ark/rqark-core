@@ -65,7 +65,7 @@ class ScriptedCore(AgentCore):
     async def _create(self, **params: Any):
         return None
 
-    async def _parse_stream(self, stream: Any) -> AssistantMessage:
+    async def _parse_stream(self, stream: Any, handle_chunk: Any = None) -> AssistantMessage:
         return self.script.pop(0)
 
 
@@ -91,7 +91,7 @@ async def test_subagent_child_core_shares_extras(monkeypatch: Any):
             seen.append(kwargs.get('extras'))
             super().__init__(**kwargs)
 
-        async def chat(self, provider: Any, messages: Any, prompts: Any = (), tools: Any = ()):
+        async def chat(self, provider: Any, messages: Any, prompts: Any = (), tools: Any = (), partial: Any = None):
             return [AssistantMessage('child result')], None
 
     class ParentCore(AgentCore):

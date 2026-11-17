@@ -78,7 +78,7 @@ async def test_subagent_prompts_also_see_the_extras(monkeypatch: Any):
     child_prompt = RecordingPrompt()
 
     class ChildCore(AgentCore):
-        async def chat(self, provider: Any, messages: Any, prompts: Any = (), tools: Any = ()):
+        async def chat(self, provider: Any, messages: Any, prompts: Any = (), tools: Any = (), partial: Any = None):
             for prompt in prompts:
                 await prompt.get_messages(PromptContext(core=self, provider=provider, extras=self.extras))
             return [AssistantMessage('child result')], None
@@ -107,7 +107,7 @@ async def test_subagent_uses_the_parent_core_type(monkeypatch: Any):
             spawned.append(child)
             return child
 
-        async def chat(self, provider: Any, messages: Any, prompts: Any = (), tools: Any = ()):
+        async def chat(self, provider: Any, messages: Any, prompts: Any = (), tools: Any = (), partial: Any = None):
             return [AssistantMessage('child result')], None
 
     parent = ProxiedCore()
