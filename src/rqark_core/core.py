@@ -1,3 +1,4 @@
+import asyncio
 import ssl
 from collections.abc import Sequence
 from typing import Any
@@ -8,10 +9,14 @@ from openai import AsyncOpenAI, AsyncStream
 
 from rqark_core._core.event import AgentCoreEventEmitter
 from rqark_core._core.stream import ChunkHandler, ToolHandler
-from rqark_core.types.chat import AssistantMessage, Chunk, Message, SystemMessage
+from rqark_core.types.chat import AssistantMessage, Chunk, Message, SystemMessage, ToolMessage
 from rqark_core.types.prompt import BasePrompt, PromptContext
 from rqark_core.types.provider import Provider
 from rqark_core.types.tool import BaseTool, PlanItem, ToolContext
+
+# Written in place of the result a cancelled turn never got, so the tool call the
+# model asked for stays in the transcript instead of being dropped with the turn.
+STOPPED_TOOL_RESULT = 'Error: the user stopped the turn before this tool returned'
 
 
 class AgentCore(AgentCoreEventEmitter):
@@ -100,14 +105,41 @@ class AgentCore(AgentCoreEventEmitter):
             params['extra_body'] = {'chat_template_kwargs': {'enable_thinking': thinking == 'enabled'}}
         return params
 
-    async def _parse_stream(self, stream: AsyncStream) -> AssistantMessage:
-        handle_chunk = ChunkHandler(self._emit_chunk)
+    async def _parse_stream(self, stream: AsyncStream, handle_chunk: ChunkHandler | None = None) -> AssistantMessage:
+        handle_chunk = handle_chunk or ChunkHandler(self._emit_chunk)
         async with stream:
             async for chunk in stream:
                 await handle_chunk.handle(chunk)
         return await handle_chunk.message()
 
-    async def chat(self, provider: Provider, messages: Sequence[Message], prompts: Sequence[BasePrompt] = [], tools: Sequence[BaseTool] = []) -> tuple[Sequence[Message], Exception | None]:
+    def _partial_turn(self, history: list[Message], handle_chunk: ChunkHandler | None, message_appended: bool) -> list[Message]:
+        """The turn as it stood when the caller cancelled it.
+
+        A stopped turn is stored and replayed to a provider by the next turn, so it
+        has to be a valid transcript: the answer the user watched streaming never
+        reached `history`, and a tool call without its result leaves the assistant
+        message unusable. The streamed text is kept and the missing results are
+        marked as interrupted, so neither the answer nor the tool record is lost.
+        """
+        turn = list(history)
+        end = len(turn)
+        while end and isinstance(turn[end - 1], ToolMessage):
+            end -= 1
+        last = turn[end - 1] if end else None
+        if isinstance(last, AssistantMessage) and last.tool_calls:
+            answered = {m.tool_call_id for m in turn[end:] if isinstance(m, ToolMessage)}
+            turn.extend(ToolMessage(tc.id, STOPPED_TOOL_RESULT, tc.name, tc.arguments) for tc in last.tool_calls if tc.id not in answered)
+        if not message_appended and handle_chunk is not None and (handle_chunk.content or handle_chunk.reasoning):
+            turn.append(AssistantMessage(handle_chunk.content, reasoning_content=handle_chunk.reasoning or None))
+        return turn
+
+    async def chat(self, provider: Provider, messages: Sequence[Message], prompts: Sequence[BasePrompt] = [], tools: Sequence[BaseTool] = [], partial: list[Message] | None = None) -> tuple[Sequence[Message], Exception | None]:
+        """Run one turn, through as many tool iterations as the model asks for.
+
+        `partial` receives the turn built so far if the caller cancels this call:
+        the turn only exists in this frame, so a stop would otherwise throw away
+        every tool call and result it had already made.
+        """
         error: Exception | None = None
         tool_map = self._get_tool_map(tools)
         ctx = ToolContext(core=self, provider=provider, extras=self.extras)
@@ -115,26 +147,36 @@ class AgentCore(AgentCoreEventEmitter):
         system_prompts = await self._get_system_prompts(prompts, prompt_ctx)
         history, system_count = self._build_history(provider, system_prompts, [], messages)
         tool_handler = ToolHandler(self.tool_timeout, self._emit_chunk, self._emit_message)
-        async with self._get_client(provider) as client:
-            while True:
-                # Tool prompts are rebuilt every iteration: tools run inside this loop and may
-                # change the state they render (e.g. plan_update writes core.plan_items), so a
-                # head computed once per turn would be stale for the rest of the turn.
-                head = self._render_head(provider, system_prompts, self._get_tool_prompts(tools, ctx))
-                history[0:system_count] = head
-                system_count = len(head)
-                params = await self._build_chat_params(provider, history, tools)
-                try:
-                    resp: AsyncStream = await client.chat.completions.create(**params)
-                    msg = await self._parse_stream(resp)
-                    history.append(msg)
-                    await self._emit_message(msg)
-                    if not msg.tool_calls:
+        handle_chunk: ChunkHandler | None = None
+        message_appended = True
+        try:
+            async with self._get_client(provider) as client:
+                while True:
+                    # Tool prompts are rebuilt every iteration: tools run inside this loop and may
+                    # change the state they render (e.g. plan_update writes core.plan_items), so a
+                    # head computed once per turn would be stale for the rest of the turn.
+                    head = self._render_head(provider, system_prompts, self._get_tool_prompts(tools, ctx))
+                    history[0:system_count] = head
+                    system_count = len(head)
+                    params = await self._build_chat_params(provider, history, tools)
+                    try:
+                        handle_chunk = ChunkHandler(self._emit_chunk)
+                        message_appended = False
+                        resp: AsyncStream = await client.chat.completions.create(**params)
+                        msg = await self._parse_stream(resp, handle_chunk)
+                        history.append(msg)
+                        message_appended = True
+                        await self._emit_message(msg)
+                        if not msg.tool_calls:
+                            break
+                        await tool_handler.use_tools(msg, tool_map, history, ctx)
+                    except Exception as e:
+                        error = e
+                        await self._emit_chunk(Chunk('error', f'{type(error).__name__}: {error}'))
+                        self._clean_history(history)
                         break
-                    await tool_handler.use_tools(msg, tool_map, history, ctx)
-                except Exception as e:
-                    error = e
-                    await self._emit_chunk(Chunk('error', f'{type(error).__name__}: {error}'))
-                    self._clean_history(history)
-                    break
+        except asyncio.CancelledError:
+            if partial is not None:
+                partial[:] = self._partial_turn(history[system_count:], handle_chunk, message_appended)
+            raise
         return history[system_count:], error
