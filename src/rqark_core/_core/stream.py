@@ -1,13 +1,16 @@
+from __future__ import annotations
+
 import asyncio
 import json
 from dataclasses import replace
-from typing import Any
-
-from openai.types.chat.chat_completion_chunk import ChatCompletionChunk, ChoiceDelta
+from typing import TYPE_CHECKING, Any
 
 from rqark_core.libs.event import EventFunction
 from rqark_core.types.chat import AssistantMessage, Chunk, Message, ToolCall, ToolMessage, Usage
 from rqark_core.types.tool import BaseTool, ToolContext
+
+if TYPE_CHECKING:
+    from openai.types.chat.chat_completion_chunk import ChatCompletionChunk, ChoiceDelta
 
 
 class ChunkHandler:

@@ -18,7 +18,7 @@ class _FakeMarkItDown:
 
 @pytest.fixture
 def fake(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(convert_document, 'MarkItDown', _FakeMarkItDown)
+    monkeypatch.setattr(convert_document, '_import_markitdown', lambda: _FakeMarkItDown)
 
 
 async def test_converts_docx_next_to_original(tmp_path: Path, fake: None) -> None:
@@ -47,10 +47,19 @@ async def test_rejects_unsupported(tmp_path: Path, fake: None) -> None:
 async def test_missing_markitdown(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     src = tmp_path / 'a.pdf'
     src.write_bytes(b'x')
-    monkeypatch.setattr(convert_document, 'MarkItDown', None)
+    monkeypatch.setattr(convert_document, '_import_markitdown', lambda: None)
     assert 'markitdown is not installed' in await ConvertDocument().run(path=str(src))
 
 
 def test_schema() -> None:
     schema: dict[str, Any] = ConvertDocument().get_openai_schema()
     assert schema['function']['name'] == 'convert_document'
+
+
+def test_markitdown_is_not_imported_until_a_document_is_converted() -> None:
+    import subprocess
+    import sys
+
+    probe = 'import sys, rqark_core.tools.convert_document as m; m.ConvertDocument(); print("markitdown" in sys.modules)'
+    out = subprocess.run([sys.executable, '-c', probe], capture_output=True, text=True, check=True)
+    assert out.stdout.strip() == 'False'

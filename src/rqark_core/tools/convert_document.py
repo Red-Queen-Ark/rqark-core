@@ -1,18 +1,20 @@
 import asyncio
+from functools import cache
 from pathlib import Path
 from typing import Any
 
 from rqark_core.types.tool import BaseTool, ToolContext
 
-MarkItDown: Any = None
-try:
-    from markitdown import MarkItDown as _MarkItDown
-
-    MarkItDown = _MarkItDown
-except ImportError:
-    pass
-
 SUPPORTED_SUFFIXES: frozenset[str] = frozenset({'.docx', '.pdf'})
+
+
+@cache
+def _import_markitdown() -> Any:
+    try:
+        from markitdown import MarkItDown
+    except ImportError:
+        return None
+    return MarkItDown
 
 
 class ConvertDocument(BaseTool):
@@ -45,8 +47,6 @@ class ConvertDocument(BaseTool):
         return await asyncio.to_thread(self._convert, str(kwargs['path']), kwargs.get('output'))
 
     def _convert(self, path: str, output: str | None) -> str:
-        if MarkItDown is None:
-            return 'Error: markitdown is not installed'
         src = Path(path)
         if not src.exists():
             return f'Error: file not found: {path}'
@@ -54,9 +54,12 @@ class ConvertDocument(BaseTool):
             return f'Error: not a file: {path}'
         if src.suffix.lower() not in SUPPORTED_SUFFIXES:
             return f'Error: unsupported file type: {src.suffix or "(none)"}. Only .docx and .pdf are supported'
+        markitdown = _import_markitdown()
+        if markitdown is None:
+            return 'Error: markitdown is not installed'
         dest = Path(output) if output else src.with_suffix('.md')
         try:
-            result = MarkItDown().convert(str(src))
+            result = markitdown().convert(str(src))
         except Exception as e:
             return f'Error: failed to convert {path}: {e}'
         try:
