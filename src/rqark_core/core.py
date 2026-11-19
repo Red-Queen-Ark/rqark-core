@@ -1,11 +1,12 @@
+from __future__ import annotations
+
 import asyncio
 import ssl
 from collections.abc import Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import certifi
 import httpx
-from openai import AsyncOpenAI, AsyncStream
 
 from rqark_core._core.event import AgentCoreEventEmitter
 from rqark_core._core.stream import ChunkHandler, ToolHandler
@@ -13,6 +14,9 @@ from rqark_core.types.chat import AssistantMessage, Chunk, Message, SystemMessag
 from rqark_core.types.prompt import BasePrompt, PromptContext
 from rqark_core.types.provider import Provider
 from rqark_core.types.tool import BaseTool, PlanItem, ToolContext
+
+if TYPE_CHECKING:
+    from openai import AsyncOpenAI, AsyncStream
 
 # Written in place of the result a cancelled turn never got, so the tool call the
 # model asked for stays in the transcript instead of being dropped with the turn.
@@ -32,6 +36,8 @@ class AgentCore(AgentCoreEventEmitter):
     """
 
     def _get_client(self, provider: Provider):
+        from openai import AsyncOpenAI
+
         ssl_context = ssl.create_default_context(cafile=certifi.where())
         http_client = httpx.AsyncClient(verify=ssl_context)
         return AsyncOpenAI(api_key=provider.api_key, base_url=provider.api_base, http_client=http_client, default_headers={}, timeout=self.timeout)
